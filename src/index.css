@@ -1,0 +1,677 @@
+@import "./styles/tokens.css";
+@import "./styles/animations.css";
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'Geist', system-ui, sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, monospace;
+}
+
+:root {
+  --radius-card: 0.75rem;
+  --shadow-card: var(--shadow-md);
+  --shadow-card-lg: var(--shadow-lg);
+
+  --background: var(--surface-base);
+  --foreground: #0f172a;
+  --card: var(--surface-raised);
+  --card-foreground: #0f172a;
+  --popover: var(--surface-base);
+  --popover-foreground: #0f172a;
+  --primary: var(--brand-600);
+  --primary-foreground: #ffffff;
+  --secondary: var(--surface-overlay);
+  --secondary-foreground: #334155;
+  --muted: var(--surface-overlay);
+  --muted-foreground: #64748b;
+  --divider-faint: color-mix(in srgb, var(--foreground) 6%, transparent);
+  --accent: #3b82f6;
+  --accent-foreground: #ffffff;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  --border: #e2e8f0;
+  --input: #e2e8f0;
+  --ring: #3b82f6;
+  --sidebar-bg: #1b3a6b;
+  --sidebar-fg: #e2e8f0;
+  --sidebar-active: rgba(59, 130, 246, 0.2);
+  --sidebar-hover: rgba(255, 255, 255, 0.08);
+  --success: #10b981;
+  --warning: #f59e0b;
+  --info: #0ea5e9;
+  --success-bg: color-mix(in srgb, var(--success) 14%, transparent);
+  --warning-bg: color-mix(in srgb, var(--warning) 18%, transparent);
+  --info-bg: color-mix(in srgb, var(--info) 16%, transparent);
+
+  --selection-bg: rgba(59, 130, 246, 0.22);
+  --selection-fg: inherit;
+}
+
+.dark {
+  --shadow-card: var(--shadow-md);
+  --shadow-card-lg: var(--shadow-lg);
+
+  --background: var(--surface-base);
+  --foreground: #f1f5f9;
+  --card: var(--surface-raised);
+  --card-foreground: #f1f5f9;
+  --popover: var(--surface-raised);
+  --popover-foreground: #f1f5f9;
+  --primary: #3b82f6;
+  --primary-foreground: #ffffff;
+  --secondary: var(--surface-overlay);
+  --secondary-foreground: #94a3b8;
+  --muted: var(--surface-overlay);
+  --muted-foreground: #94a3b8;
+  --divider-faint: color-mix(in srgb, var(--foreground) 8%, transparent);
+  --accent: #3b82f6;
+  --accent-foreground: #ffffff;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  --border: #334155;
+  --input: #334155;
+  --ring: #3b82f6;
+  --sidebar-bg: #0f172a;
+  --sidebar-fg: #cbd5e1;
+  --sidebar-active: rgba(59, 130, 246, 0.2);
+  --sidebar-hover: rgba(255, 255, 255, 0.05);
+  --success: #10b981;
+  --warning: #f59e0b;
+  --info: #38bdf8;
+  --success-bg: color-mix(in srgb, var(--success) 18%, transparent);
+  --warning-bg: color-mix(in srgb, var(--warning) 22%, transparent);
+  --info-bg: color-mix(in srgb, var(--info) 18%, transparent);
+
+  --selection-bg: rgba(96, 165, 250, 0.32);
+  --selection-fg: inherit;
+}
+
+* {
+  box-sizing: border-box;
+  border-color: var(--border);
+}
+
+/* Scrollbars nativos coherentes con tema */
+:root {
+  color-scheme: light;
+}
+.dark {
+  color-scheme: dark;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Enlace para saltar navegación (accesibilidad) */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0.75rem;
+  z-index: 100;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  background: var(--accent);
+  color: var(--accent-foreground);
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+}
+.skip-link:focus {
+  left: 0.75rem;
+  outline: 2px solid var(--ring);
+  outline-offset: 3px;
+}
+
+/* Foco de teclado visible sin estorbar clic con ratón */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* Botones y enlaces del shell: el componente puede anular con outline-none si hace falta */
+button:focus-visible,
+a:focus-visible,
+[role='button']:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* Fondo suave en login (sin competir con el formulario) */
+.login-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 90% 70% at 50% -30%, rgba(59, 130, 246, 0.12), transparent 55%);
+  pointer-events: none;
+}
+.dark .login-hero::before {
+  background: radial-gradient(ellipse 90% 70% at 50% -30%, rgba(59, 130, 246, 0.2), transparent 55%);
+}
+
+body {
+  margin: 0;
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: var(--selection-bg);
+  color: var(--selection-fg);
+}
+
+/* Superficie principal: varias capas radiales suaves (evita banda horizontal del elipse centrado al 50%) */
+.app-main-surface {
+  background-color: var(--background);
+  background-image:
+    radial-gradient(ellipse 100% 62% at 14% -14%, color-mix(in srgb, var(--accent) 9%, transparent), transparent 56%),
+    radial-gradient(ellipse 88% 52% at 96% 4%, color-mix(in srgb, var(--brand-500) 6%, transparent), transparent 50%),
+    radial-gradient(ellipse 72% 44% at 52% 102%, color-mix(in srgb, var(--accent) 4%, transparent), transparent 42%);
+  background-attachment: scroll;
+}
+
+.dark .app-main-surface {
+  background-image:
+    radial-gradient(ellipse 108% 68% at 8% -12%, color-mix(in srgb, var(--accent) 15%, transparent), transparent 58%),
+    radial-gradient(ellipse 92% 54% at 100% 0%, color-mix(in srgb, var(--brand-400) 10%, transparent), transparent 52%),
+    radial-gradient(ellipse 78% 48% at 50% 104%, color-mix(in srgb, var(--accent) 7%, transparent), transparent 44%),
+    linear-gradient(
+      168deg,
+      color-mix(in srgb, var(--surface-raised) 35%, transparent) 0%,
+      transparent 38%,
+      transparent 62%,
+      color-mix(in srgb, var(--surface-overlay) 22%, transparent) 100%
+    );
+}
+
+#root {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--muted-foreground); }
+
+/* TipTap editor */
+.ProseMirror { outline: none; min-height: 300px; padding: 1rem; }
+.ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: var(--muted-foreground);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+.ProseMirror h1 { font-size: 1.875rem; font-weight: 700; margin: 1rem 0 0.5rem; line-height: 1.2; }
+.ProseMirror h2 { font-size: 1.5rem; font-weight: 600; margin: 1rem 0 0.5rem; line-height: 1.3; }
+.ProseMirror h3 { font-size: 1.25rem; font-weight: 600; margin: 0.75rem 0 0.5rem; }
+.ProseMirror h4 { font-size: 1.05rem; font-weight: 600; margin: 0.65rem 0 0.35rem; color: var(--foreground); }
+.ProseMirror p { margin: 0.65rem 0; line-height: 1.78; }
+.ProseMirror p:first-child { margin-top: 0; }
+.ProseMirror p + p { margin-top: 0.55rem; }
+.ProseMirror ul { list-style: disc; padding-left: 1.5rem; margin: 0.5rem 0; }
+.ProseMirror ol { list-style: decimal; padding-left: 1.5rem; margin: 0.5rem 0; }
+.ProseMirror li { margin: 0.25rem 0; }
+.ProseMirror blockquote {
+  border-left: 4px solid var(--accent);
+  padding-left: 1rem;
+  color: var(--muted-foreground);
+  font-style: italic;
+  margin: 1rem 0;
+}
+.ProseMirror code {
+  background: var(--muted);
+  border-radius: 0.25rem;
+  padding: 0.125rem 0.375rem;
+  font-family: var(--font-mono);
+  font-size: 0.875em;
+}
+.ProseMirror pre {
+  background: #0f172a;
+  color: #e2e8f0;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  overflow-x: auto;
+  margin: 1rem 0;
+  font-family: ui-monospace, "Cascadia Code", "Consolas", monospace;
+}
+.ProseMirror pre code {
+  background: none;
+  padding: 0;
+  color: inherit;
+  font-family: inherit;
+  font-size: 0.88em;
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.5;
+}
+.ProseMirror table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
+.ProseMirror th, .ProseMirror td { border: 1px solid var(--border); padding: 0.5rem 0.75rem; text-align: left; }
+.ProseMirror th { background: var(--muted); font-weight: 600; }
+.ProseMirror a { color: var(--accent); text-decoration: underline; cursor: pointer; }
+.ProseMirror mark { background: #fef08a; border-radius: 0.125rem; padding: 0 0.125rem; }
+.ProseMirror ul[data-type="taskList"] { list-style: none; padding-left: 0.5rem; }
+.ProseMirror ul[data-type="taskList"] li { display: flex; align-items: flex-start; gap: 0.5rem; }
+.ProseMirror ul[data-type="taskList"] li > label { margin-top: 0.25rem; }
+
+/* Bloques CCMGC (callout, paso de procedimiento) — editor y HTML generado */
+.ProseMirror .ccmgc-callout,
+.doc-view-article .ccmgc-callout {
+  margin: 1rem 0;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  border-left: 4px solid var(--border);
+  background: var(--muted);
+}
+.ProseMirror .ccmgc-callout--info,
+.doc-view-article .ccmgc-callout--info {
+  border-left-color: #3b82f6;
+  background: color-mix(in srgb, #3b82f6 12%, var(--muted));
+}
+.ProseMirror .ccmgc-callout--warning,
+.doc-view-article .ccmgc-callout--warning {
+  border-left-color: #eab308;
+  background: color-mix(in srgb, #eab308 14%, var(--muted));
+}
+.ProseMirror .ccmgc-callout--danger,
+.doc-view-article .ccmgc-callout--danger {
+  border-left-color: #ef4444;
+  background: color-mix(in srgb, #ef4444 12%, var(--muted));
+}
+.ProseMirror .ccmgc-callout--success,
+.doc-view-article .ccmgc-callout--success {
+  border-left-color: #22c55e;
+  background: color-mix(in srgb, #22c55e 12%, var(--muted));
+}
+.ProseMirror .ccmgc-procedure-step,
+.doc-view-article .ccmgc-procedure-step {
+  margin: 1rem 0;
+  padding: 0.75rem 1rem 0.75rem 3rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--border);
+  background: var(--card);
+  position: relative;
+}
+.ProseMirror .ccmgc-procedure-step::before,
+.doc-view-article .ccmgc-procedure-step::before {
+  content: attr(data-step);
+  position: absolute;
+  left: 0.75rem;
+  top: 0.75rem;
+  min-width: 1.75rem;
+  height: 1.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  border-radius: 9999px;
+  background: var(--accent);
+  color: var(--accent-foreground);
+}
+
+/* Vista lectura: mayor aire y jerarquía (importaciones Word/PDF, TipTap) */
+.doc-view-article {
+  font-size: 1.0625rem;
+  line-height: 1.75;
+  color: var(--foreground);
+  max-width: 100%;
+  padding: 0.5rem 0 2rem;
+}
+
+.doc-view-article > *:first-child { margin-top: 0; }
+
+.doc-view-article p {
+  margin: 0.85rem 0;
+  line-height: 1.8;
+}
+
+.doc-view-article h1,
+.doc-view-article h2,
+.doc-view-article h3,
+.doc-view-article h4 {
+  margin-top: 2rem;
+  margin-bottom: 0.75rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--foreground);
+}
+
+.doc-view-article h1 { font-size: 1.875rem; line-height: 1.25; margin-top: 0; }
+.doc-view-article h2 { font-size: 1.5rem; line-height: 1.3; }
+.doc-view-article h3 { font-size: 1.25rem; line-height: 1.35; }
+.doc-view-article h4 { font-size: 1.1rem; }
+
+.doc-view-article ul,
+.doc-view-article ol {
+  margin: 1rem 0;
+  padding-left: 1.5rem;
+}
+.doc-view-article li { margin: 0.4rem 0; line-height: 1.7; }
+.doc-view-article li > p { margin: 0.35rem 0; }
+
+/* Word / Mammoth */
+.doc-view-article p.MsoNormal,
+.doc-view-article .MsoNormal { margin: 0.65em 0; line-height: 1.75; }
+.doc-view-article div.WordSection1 > p + p { margin-top: 0.75rem; }
+
+.doc-view-article table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1.25rem 0;
+  font-size: 0.95em;
+}
+.doc-view-article th,
+.doc-view-article td {
+  border: 1px solid var(--border);
+  padding: 0.6rem 0.85rem;
+  vertical-align: top;
+}
+.doc-view-article th { background: var(--muted); font-weight: 600; }
+.doc-view-article tr:nth-child(even) td { background: rgba(148, 163, 184, 0.06); }
+
+.doc-view-article hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 2rem 0;
+}
+
+.doc-view-article blockquote {
+  margin: 1.25rem 0;
+  padding: 0.75rem 1rem 0.75rem 1.1rem;
+  border-left: 4px solid var(--accent);
+  background: var(--muted);
+  border-radius: 0 0.5rem 0.5rem 0;
+  color: var(--muted-foreground);
+}
+
+/* Separador de página tras OCR por hoja */
+.ProseMirror hr.import-ocr-page-sep,
+.doc-view-article hr.import-ocr-page-sep {
+  margin: 1.5rem 0;
+  border: none;
+  border-top: 1px dashed var(--border);
+  opacity: 0.9;
+}
+
+/* Líneas de índice / TOC tras importación */
+.doc-view-article p.import-toc-line,
+.import-toc-line {
+  margin: 0.5rem 0 0.5rem 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-left: 3px solid var(--accent);
+  border-radius: 0 0.375rem 0.375rem 0;
+  background: rgba(59, 130, 246, 0.06);
+  line-height: 1.65;
+}
+
+.dark .doc-view-article p.import-toc-line,
+.dark .import-toc-line {
+  background: rgba(59, 130, 246, 0.12);
+}
+
+/* Editor TipTap: el índice importado no debe verse como un solo bloque denso */
+.doc-view-article.prose-editor-toc .ProseMirror p.import-toc-line,
+.ProseMirror.prose-editor-toc p.import-toc-line {
+  margin-top: 0.5rem !important;
+  margin-bottom: 0.5rem !important;
+}
+
+.doc-view-article.prose-editor-toc .ProseMirror ol,
+.ProseMirror.prose-editor-toc ol {
+  margin: 0.75rem 0 1rem;
+  padding-left: 1.35rem;
+}
+
+.doc-view-article.prose-editor-toc .ProseMirror ol li.import-toc-line,
+.ProseMirror.prose-editor-toc ol li.import-toc-line {
+  margin: 0.4rem 0;
+  padding-left: 0.15rem;
+}
+
+.doc-view-article.prose-editor-toc .ProseMirror ol li.import-toc-line p,
+.ProseMirror.prose-editor-toc ol li.import-toc-line p {
+  margin: 0;
+}
+
+/* Diagramas / plantillas ASCII tras importación PDF (rack, esquemas) */
+.doc-view-article pre.import-ascii-block,
+pre.import-ascii-block {
+  margin: 1.25rem 0;
+  padding: 1rem 1.1rem;
+  font-family: ui-monospace, "Cascadia Code", "Consolas", monospace;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-x: auto;
+  border-radius: 0.5rem;
+  border: 1px solid var(--border);
+  background: rgba(148, 163, 184, 0.08);
+  color: var(--foreground);
+}
+
+.dark .doc-view-article pre.import-ascii-block,
+.dark pre.import-ascii-block {
+  background: rgba(15, 23, 42, 0.45);
+}
+
+/* Misma apariencia si TipTap serializa pre>code.language-ascii (sin clase en pre) */
+.doc-view-article pre code.language-ascii,
+.ProseMirror pre code.language-ascii {
+  display: block;
+  font-family: ui-monospace, "Cascadia Code", "Consolas", monospace;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Líneas de glosario partidas tras importación */
+.doc-view-article p.import-gloss-line,
+.import-gloss-line {
+  margin: 0.65rem 0;
+  padding: 0.45rem 0 0.45rem 0.85rem;
+  border-left: 2px solid rgba(59, 130, 246, 0.45);
+  line-height: 1.75;
+}
+
+.dark .doc-view-article p.import-gloss-line,
+.dark .import-gloss-line {
+  border-left-color: rgba(96, 165, 250, 0.5);
+}
+
+/* Autoevaluación / ítems numerados tras importación PDF */
+.doc-view-article p.import-exercise-intro,
+.import-exercise-intro {
+  margin: 1.1rem 0 0.35rem;
+  font-weight: 600;
+  font-size: 1.02em;
+  letter-spacing: -0.01em;
+  color: var(--foreground);
+}
+
+.doc-view-article ol.import-numbered-exercises,
+.ProseMirror ol.import-numbered-exercises {
+  margin: 0.5rem 0 1.25rem;
+  padding-left: 1.35rem;
+  list-style: decimal;
+  list-style-position: outside;
+}
+
+.doc-view-article ol.import-numbered-exercises li,
+.ProseMirror ol.import-numbered-exercises li {
+  margin: 0.55rem 0;
+  padding-left: 0.4rem;
+  line-height: 1.75;
+}
+
+.doc-view-article ol.import-numbered-exercises li::marker,
+.ProseMirror ol.import-numbered-exercises li::marker {
+  font-weight: 600;
+  color: var(--accent);
+}
+
+/* Autoevaluación en imperativos sin numeración en el PDF */
+.doc-view-article ul.import-imperative-exercises,
+.ProseMirror ul.import-imperative-exercises {
+  margin: 0.5rem 0 1.25rem;
+  padding-left: 1.15rem;
+  list-style: disc;
+  list-style-position: outside;
+}
+
+.doc-view-article ul.import-imperative-exercises li,
+.ProseMirror ul.import-imperative-exercises li {
+  margin: 0.55rem 0;
+  padding-left: 0.35rem;
+  line-height: 1.75;
+}
+
+.doc-view-article ul.import-imperative-exercises li::marker,
+.ProseMirror ul.import-imperative-exercises li::marker {
+  color: var(--accent);
+}
+
+/* PDF: número de subapartado en un <p> y título en el siguiente */
+.doc-view-article p.import-subsection-heading,
+.import-subsection-heading {
+  margin: 1.15rem 0 0.65rem;
+  font-weight: 600;
+  font-size: 1.05rem;
+  letter-spacing: -0.02em;
+  color: var(--foreground);
+}
+
+.doc-view-article p.import-subsection-heading .import-sec-num,
+.import-subsection-heading .import-sec-num {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+/* En el editor, reforzar aire entre secciones (toolbar TipTap + import) */
+.doc-view-article .ProseMirror h2 {
+  margin-top: 2rem;
+  margin-bottom: 0.75rem;
+}
+.doc-view-article .ProseMirror h3 {
+  margin-top: 1.75rem;
+  margin-bottom: 0.65rem;
+}
+.doc-view-article .ProseMirror h4 {
+  margin-top: 1.35rem;
+  margin-bottom: 0.5rem;
+}
+.doc-view-article .ProseMirror pre + p,
+.doc-view-article .ProseMirror p + pre {
+  margin-top: 1rem;
+}
+
+/* Bloque ASCII tras guardar (TipTap → pre>code.language-ascii, sin clase en pre) */
+.doc-view-article .ProseMirror pre:has(> code.language-ascii),
+.doc-view-article pre:has(> code.language-ascii) {
+  background: rgba(148, 163, 184, 0.08);
+  color: var(--foreground);
+  border: 1px solid var(--border);
+}
+.dark .doc-view-article .ProseMirror pre:has(> code.language-ascii),
+.dark .doc-view-article pre:has(> code.language-ascii) {
+  background: rgba(15, 23, 42, 0.55);
+}
+
+/* Aire tras título antes del siguiente párrafo */
+.doc-view-article h1 + p,
+.doc-view-article h2 + p,
+.doc-view-article h3 + p {
+  margin-top: 0.75rem;
+}
+
+/* Mention style */
+.mention {
+  color: var(--accent);
+  background: rgba(59, 130, 246, 0.1);
+  border-radius: 0.25rem;
+  padding: 0.125rem 0.25rem;
+  font-weight: 500;
+}
+
+/* Utilidades de layout / elevación (DocBrain polish) */
+.app-page-x {
+  padding-left: var(--page-gutter);
+  padding-right: var(--page-gutter);
+}
+
+.elev-1 {
+  box-shadow: var(--elev-1);
+}
+.elev-2 {
+  box-shadow: var(--elev-2);
+}
+.elev-3 {
+  box-shadow: var(--elev-3);
+}
+
+.z-app-drawer-backdrop {
+  z-index: var(--z-drawer-backdrop);
+}
+.z-app-sidebar {
+  z-index: var(--z-sidebar);
+}
+.z-app-command {
+  z-index: var(--z-command-palette);
+}
+.z-app-modal {
+  z-index: var(--z-modal);
+}
+
+/* Vista impresión: contenido legible, sin navegación */
+@media print {
+  .skip-link,
+  aside[aria-label='Navegación principal'],
+  header,
+  [data-docbrain-overlay],
+  [role='dialog'] {
+    display: none !important;
+  }
+
+  body,
+  .app-main-surface {
+    background: #fff !important;
+    color: #0f172a !important;
+  }
+
+  .app-main-surface {
+    overflow: visible !important;
+  }
+
+  #main-content {
+    padding: 0 !important;
+  }
+
+  .doc-view-article,
+  .ProseMirror {
+    max-width: 100% !important;
+    box-shadow: none !important;
+  }
+
+  a[href]::after {
+    content: none;
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm create *)",
+      "Bash(npm run *)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Saul Web\\\\DocsBrain\" -Recurse -Directory)",
+      "Bash(Select-Object -ExpandProperty FullName)",
+      "Bash(Sort-Object)",
+      "Bash(npm install *)",
+      "Bash(npm audit *)",
+      "Bash(node -e \"require\\('mammoth'\\); console.log\\('mammoth ok'\\)\")",
+      "Bash(node -e \"require\\('pdfjs-dist'\\); console.log\\('pdfjs ok'\\)\")",
+      "Bash(npx tsc *)",
+      "Bash(npx vite *)",
+      "Bash(netstat -ano)",
+      "Bash(findstr \":517\")",
+      "Bash(node -e \"console.log\\(require\\('./node_modules/pdfjs-dist/package.json'\\).version\\)\")"
+    ]
+  }
+}

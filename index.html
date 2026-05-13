@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" href="/ccmgc-logo.png" sizes="any" />
+    <link rel="apple-touch-icon" href="/ccmgc-logo.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="DocBrain CCMGC — Sistema de documentación inteligente del Centro de Control de la Movilidad de Gran Canaria" />
+    <title>DocBrain CCMGC</title>
+    <script>
+      (function () {
+        try {
+          var raw = localStorage.getItem('docbrain-app');
+          if (!raw) return;
+          var parsed = JSON.parse(raw);
+          var st = parsed.state || parsed;
+          var th = st.theme;
+          if (th === 'dark') document.documentElement.classList.add('dark');
+          else if (th === 'light') document.documentElement.classList.remove('dark');
+          else if (th === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+            document.documentElement.classList.add('dark');
+        } catch (e) {}
+      })();
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

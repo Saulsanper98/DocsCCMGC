@@ -1,0 +1,180 @@
+/* Animaciones y utilidades de motion (Prompt V3) */
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeInDown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeInRight {
+  from { opacity: 0; transform: translateX(-12px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes fadeInLeft {
+  from { opacity: 0; transform: translateX(12px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes scaleInBlur {
+  from { opacity: 0; transform: scale(0.94); filter: blur(4px); }
+  to   { opacity: 1; transform: scale(1);    filter: blur(0); }
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse-ring {
+  0%   { box-shadow: 0 0 0 0   rgba(59, 130, 246, 0.4); }
+  70%  { box-shadow: 0 0 0 8px rgba(59, 130, 246, 0); }
+  100% { box-shadow: 0 0 0 0   rgba(59, 130, 246, 0); }
+}
+
+@keyframes badge-pop {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.4); }
+  70%  { transform: scale(0.9); }
+  100% { transform: scale(1); }
+}
+
+@keyframes shimmer {
+  from { background-position: -200% center; }
+  to   { background-position:  200% center; }
+}
+
+@keyframes ripple {
+  from { transform: scale(0); opacity: 0.5; }
+  to   { transform: scale(4); opacity: 0; }
+}
+
+/* Rotación suave para toggle de tema */
+@keyframes spinIn {
+  from { transform: rotate(-90deg) scale(0.7); opacity: 0; }
+  to   { transform: rotate(0deg)   scale(1);   opacity: 1; }
+}
+
+/* Barra de progreso de navegación */
+@keyframes progress-indeterminate {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(200%); }
+}
+
+/* Entrada escalonada para listas */
+.stagger-item {
+  opacity: 0;
+  animation: fadeInUp var(--duration-base) var(--ease-smooth) forwards;
+}
+.stagger-item:nth-child(1)  { animation-delay: 0ms; }
+.stagger-item:nth-child(2)  { animation-delay: 40ms; }
+.stagger-item:nth-child(3)  { animation-delay: 80ms; }
+.stagger-item:nth-child(4)  { animation-delay: 120ms; }
+.stagger-item:nth-child(5)  { animation-delay: 160ms; }
+.stagger-item:nth-child(6)  { animation-delay: 200ms; }
+.stagger-item:nth-child(7)  { animation-delay: 240ms; }
+.stagger-item:nth-child(8)  { animation-delay: 280ms; }
+.stagger-item:nth-child(9)  { animation-delay: 320ms; }
+.stagger-item:nth-child(10) { animation-delay: 360ms; }
+.stagger-item:nth-child(n+11) { animation-delay: 400ms; }
+
+/* Entrada scroll-triggered */
+.observe-fade {
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity var(--duration-slow) var(--ease-smooth),
+              transform var(--duration-slow) var(--ease-smooth);
+}
+.observe-fade.in-view {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Skeleton shimmer */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--surface-overlay) 25%,
+    var(--surface-sunken) 50%,
+    var(--surface-overlay) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  border-radius: var(--border-radius-sm);
+}
+
+/* Separador degradado */
+.separator-gradient {
+  border: none;
+  height: 1px;
+  background: var(--gradient-separator);
+  margin: 0;
+}
+
+/* Transiciones de página */
+.page-transition-enter {
+  animation: fadeInUp var(--duration-base) var(--ease-smooth) both;
+}
+
+.command-palette-row-stagger {
+  animation: fadeInUp var(--duration-base) var(--ease-smooth) both;
+}
+
+/* Card hover lift */
+.card-hover-lift {
+  transition:
+    box-shadow var(--duration-base) var(--ease-smooth),
+    transform  var(--duration-base) var(--ease-smooth),
+    border-color var(--duration-base) var(--ease-smooth);
+}
+.card-hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+/* Nav progress bar */
+.nav-progress-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  z-index: 9999;
+  background: var(--accent);
+  transform-origin: left;
+  pointer-events: none;
+  animation: progress-indeterminate 1s ease-in-out infinite;
+}
+
+/* Ripple container (posición relativa requerida) */
+.ripple-effect {
+  position: absolute;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.35);
+  pointer-events: none;
+  animation: ripple 600ms linear forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton { animation: none; background: var(--surface-overlay); }
+  .stagger-item { animation: none; opacity: 1; }
+  .observe-fade { opacity: 1; transform: none; transition: none; }
+  .page-transition-enter { animation: none; }
+  .command-palette-row-stagger { animation: none; }
+  .card-hover-lift:hover { transform: none; }
+  .nav-progress-bar { animation: none; }
+}
