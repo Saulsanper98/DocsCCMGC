@@ -1,11 +1,12 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { generateHTML } from '@tiptap/html';
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import {
   Edit, Star, StarOff, Eye, Clock,
   ChevronLeft, Tag, User, MessageSquare, Paperclip, History,
-  Download, BookOpen, Link2, AlignLeft, Minimize2, Maximize2, X,
-  Bot, Copy,
+  Download, BookOpen, Link2, AlignLeft, AlignRight, Minimize2, Maximize2, X,
+  Bot, Copy, Mail, MoreHorizontal,
 } from 'lucide-react';
 import { useDocument } from './useDocuments';
 import { useAttachments } from './useAttachments';
@@ -21,7 +22,9 @@ import { StatusBadge } from '@/shared/components/ui/Badge';
 import { Avatar } from '@/shared/components/ui/Avatar';
 import { Skeleton, SkeletonText } from '@/shared/components/ui/Skeleton';
 import { formatDate, formatRelativeTime } from '@/shared/utils/format';
+import { formatPrivacyEmail } from '@/shared/utils/formatPrivacy';
 import { useCopyToClipboard } from '@/shared/hooks/useCopyToClipboard';
+import { useScrollRevealScrollbarClass } from '@/shared/hooks/useScrollRevealScrollbar';
 import { pushRecentDocument } from '@/shared/utils/recentDocuments';
 import { getEditorExtensions } from './editor/getEditorExtensions';
 import { DocumentHealthStrip } from './DocumentHealthStrip';
@@ -72,27 +75,40 @@ function processHtmlContent(html: string): string {
 /* ── Floating TOC ── */
 function FloatingTOC({ headings, activeId }: { headings: TocHeading[]; activeId: string }) {
   if (headings.length === 0) return null;
+  const padForLevel = (level: number) => {
+    if (level <= 1) return 'pl-2.5';
+    if (level === 2) return 'pl-4';
+    return 'pl-6';
+  };
   return (
     <nav aria-label="Tabla de contenidos" className="space-y-0.5">
-      {headings.map((h) => (
-        <a
-          key={h.id}
-          href={`#${h.id}`}
-          className={cn(
-            'block text-xs leading-relaxed transition-colors rounded px-2 py-0.5',
-            h.level === 1 ? 'font-semibold' : h.level === 2 ? 'pl-3' : 'pl-5 text-[11px]',
-            activeId === h.id
-              ? 'text-[var(--accent)] bg-[var(--accent)]/10 font-medium'
-              : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]',
-          )}
-          onClick={(e) => {
-            e.preventDefault();
-            document.getElementById(h.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          }}
-        >
-          {h.text}
-        </a>
-      ))}
+      {headings.map((h) => {
+        const active = activeId === h.id;
+        return (
+          <a
+            key={h.id}
+            href={`#${h.id}`}
+            className={cn(
+              'block rounded-lg border border-transparent py-2 pr-2 text-[0.8125rem] leading-snug transition-[color,background-color,border-color,box-shadow] duration-150',
+              padForLevel(h.level),
+              h.level === 1 && 'font-semibold text-[var(--foreground)]',
+              h.level > 1 && 'font-normal text-[var(--muted-foreground)]',
+              active
+                ? cn(
+                    'border-[color-mix(in_srgb,var(--accent)_35%,var(--border))] bg-[color-mix(in_srgb,var(--accent)_14%,var(--card))] text-[var(--foreground)] shadow-[inset_3px_0_0_0_var(--accent)]',
+                    'dark:bg-[color-mix(in_srgb,var(--accent)_12%,transparent)]',
+                  )
+                : 'hover:border-[var(--border)]/80 hover:bg-[var(--muted)]/35 hover:text-[var(--foreground)]',
+            )}
+            onClick={(e) => {
+              e.preventDefault();
+              document.getElementById(h.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }}
+          >
+            {h.text}
+          </a>
+        );
+      })}
     </nav>
   );
 }
@@ -178,8 +194,12 @@ export function DocumentViewPage() {
   const [originalPreviewOpen, setOriginalPreviewOpen] = useState(false);
   const [readingMode, setReadingMode] = useState(false);
   const [showToc, setShowToc] = useState(true);
+  const [showInfoPanel, setShowInfoPanel] = useState(true);
   const [activeHeading, setActiveHeading] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
+  const tocScrollRef = useRef<HTMLDivElement>(null);
+  const readingScrollRef = useRef<HTMLDivElement>(null);
+  const infoScrollRef = useRef<HTMLDivElement>(null);
   const [readProgress, setReadProgress] = useState(0);
   const { copy } = useCopyToClipboard();
 
@@ -226,6 +246,17 @@ export function DocumentViewPage() {
   const htmlContent = useMemo(() => processHtmlContent(rawHtml), [rawHtml]);
   const tocHeadings = useMemo(() => extractHeadings(rawHtml), [rawHtml]);
 
+  const mainScrollbarClass = useScrollRevealScrollbarClass(scrollRef, doc?.id);
+  const tocScrollbarClass = useScrollRevealScrollbarClass(
+    tocScrollRef,
+    tocHeadings.length > 0 && showToc && !rightPanel ? doc?.id : null,
+  );
+  const readingScrollbarClass = useScrollRevealScrollbarClass(readingScrollRef, readingMode ? doc?.id : null);
+  const infoScrollbarClass = useScrollRevealScrollbarClass(
+    infoScrollRef,
+    showInfoPanel && !rightPanel ? doc?.id : null,
+  );
+
   // IntersectionObserver for active TOC heading
   useEffect(() => {
     if (!scrollRef.current || tocHeadings.length === 0) return;
@@ -267,7 +298,7 @@ export function DocumentViewPage() {
 
   if (loading) {
     return (
-      <div className="max-w-3xl mx-auto px-8 py-8 space-y-4">
+      <div className="app-page-x w-full py-8 space-y-4">
         <Skeleton className="h-10 w-3/4" />
         <div className="flex items-center gap-3">
           <Skeleton className="h-8 w-8 rounded-full" />
@@ -295,19 +326,24 @@ export function DocumentViewPage() {
     <>
     {/* Reading mode overlay */}
     {readingMode && (
-      <div className="fixed inset-0 z-[150] bg-[var(--background)] overflow-y-auto">
-        <div className="max-w-2xl mx-auto px-6 py-10">
-          <div className="flex items-center justify-between mb-8">
-            <span className="text-xs text-[var(--muted-foreground)] font-medium">MODO LECTURA</span>
+      <div
+        ref={readingScrollRef}
+        className={cn(
+          'fixed inset-0 z-[150] overflow-y-auto bg-[var(--background)] doc-view-scrollbar-autohide',
+          readingScrollbarClass,
+        )}
+      >
+        <div className="app-page-x mx-auto w-full max-w-[min(42rem,100%)] py-10">
+          <div className="mb-8 flex items-center justify-between">
+            <span className="text-xs font-medium text-[var(--muted-foreground)]">MODO LECTURA</span>
             <Button variant="ghost" size="sm" onClick={() => setReadingMode(false)}>
-              <Minimize2 className="w-4 h-4 mr-1" /> Salir
+              <Minimize2 className="mr-1 h-4 w-4" /> Salir
             </Button>
           </div>
-          <h1 className="text-3xl font-bold tracking-tight text-[var(--foreground)] mb-6">{doc.title}</h1>
-          <article
-            className="doc-view-article"
-            dangerouslySetInnerHTML={{ __html: htmlContent }}
-          />
+          <h1 className="mb-6 text-balance text-3xl font-bold leading-tight tracking-tight text-[var(--foreground)] sm:text-[2rem] sm:leading-snug">
+            {doc.title}
+          </h1>
+          <article className="doc-view-article doc-view-reading" dangerouslySetInnerHTML={{ __html: htmlContent }} />
         </div>
       </div>
     )}
@@ -321,14 +357,30 @@ export function DocumentViewPage() {
     <div className="flex h-full overflow-hidden">
       {/* TOC sidebar (xl+) */}
       {tocHeadings.length > 0 && showToc && !rightPanel && (
-        <div className="hidden xl:flex w-56 shrink-0 flex-col border-r border-[var(--border)] bg-[var(--background)] overflow-y-auto">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border)]">
-            <span className="text-xs font-semibold text-[var(--muted-foreground)] uppercase tracking-wider">Contenido</span>
-            <button onClick={() => setShowToc(false)} className="p-0.5 rounded hover:bg-[var(--muted)] text-[var(--muted-foreground)]">
+        <div
+          ref={tocScrollRef}
+          className={cn(
+            'hidden xl:flex h-full min-h-0 w-[15.5rem] shrink-0 flex-col overflow-y-auto rounded-r-2xl',
+            'border border-[var(--border)]/70 border-l-0 bg-[var(--card)]/85 backdrop-blur-sm',
+            'shadow-[6px_0_28px_-14px_rgba(15,23,42,0.35)] dark:shadow-[8px_0_36px_-12px_rgba(0,0,0,0.55)]',
+            'doc-view-scrollbar-autohide',
+            tocScrollbarClass,
+          )}
+        >
+          <div className="flex items-center justify-between px-4 py-3.5 border-b border-[var(--border)]/70 shrink-0">
+            <span className="text-[11px] font-semibold text-[var(--muted-foreground)] uppercase tracking-[0.12em]">
+              Contenido
+            </span>
+            <button
+              type="button"
+              onClick={() => setShowToc(false)}
+              className="p-1 rounded-md hover:bg-[var(--muted)]/80 text-[var(--muted-foreground)] transition-colors"
+              aria-label="Ocultar tabla de contenidos"
+            >
               <X className="h-3.5 w-3.5" />
             </button>
           </div>
-          <div className="px-3 py-3">
+          <div className="px-2 py-4">
             <FloatingTOC headings={tocHeadings} activeId={activeHeading} />
           </div>
         </div>
@@ -338,7 +390,10 @@ export function DocumentViewPage() {
       <div
         ref={scrollRef}
         onScroll={onScrollMain}
-        className="relative flex-1 overflow-y-auto scroll-smooth"
+        className={cn(
+          'relative min-h-0 flex-1 overflow-y-auto scroll-smooth doc-view-scrollbar-autohide',
+          mainScrollbarClass,
+        )}
       >
         {/* Progress bar */}
         <div
@@ -355,89 +410,170 @@ export function DocumentViewPage() {
           />
         </div>
 
-        <div className="max-w-4xl mx-auto px-8 py-10">
-          {/* Breadcrumb & Actions */}
-          <div className="flex items-center justify-between mb-6 gap-2 flex-wrap">
-            <button
-              onClick={() => navigate('/documentos')}
-              className="flex items-center gap-1 text-sm text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors"
-            >
-              <ChevronLeft className="w-4 h-4" />
-              Documentos
-            </button>
-
-            <div className="flex items-center gap-1 flex-wrap">
-              {!showToc && tocHeadings.length > 0 && (
-                <Button variant="ghost" size="icon" onClick={() => setShowToc(true)} title="Mostrar tabla de contenidos" aria-label="Mostrar TOC">
-                  <AlignLeft className="w-4 h-4" />
-                </Button>
-              )}
-              <Button variant="ghost" size="icon" onClick={() => setReadingMode(true)} title="Modo lectura" aria-label="Modo lectura">
-                <Maximize2 className="w-4 h-4" />
-              </Button>
-              <Button variant="ghost" size="icon" onClick={toggleFavorite} aria-label={isFavorite ? 'Quitar favorito' : 'Añadir a favoritos'}>
-                {isFavorite
-                  ? <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
-                  : <StarOff className="w-4 h-4" />}
-              </Button>
-              <Button variant="ghost" size="icon" onClick={() => setRightPanel((p) => p === 'comments' ? null : 'comments')} aria-label="Comentarios" title="Comentarios">
-                <MessageSquare className="w-4 h-4" />
-              </Button>
-              <Button variant="ghost" size="icon" onClick={() => setRightPanel((p) => p === 'attachments' ? null : 'attachments')} aria-label="Adjuntos" title="Adjuntos">
-                <Paperclip className="w-4 h-4" />
-              </Button>
-              {canEdit && (
-                <Button variant="ghost" size="icon" onClick={() => setRightPanel((p) => p === 'versions' ? null : 'versions')} aria-label="Versiones" title="Historial de versiones">
-                  <History className="w-4 h-4" />
-                </Button>
-              )}
+        <div className="app-page-x w-full max-w-none py-8 lg:py-10">
+          {/* Breadcrumb & toolbar (dos filas: utilidades / acciones del documento) */}
+          <div className="mb-8 space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
               <button
-                onClick={() => { copy(window.location.href); toast.success('Enlace copiado'); }}
-                className="inline-flex items-center gap-1.5 h-8 px-2 text-xs font-medium rounded-md text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--muted)] transition-colors"
-                title="Copiar enlace"
+                type="button"
+                onClick={() => navigate('/documentos')}
+                className="flex items-center gap-1 text-sm text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors"
               >
-                <Link2 className="w-3.5 h-3.5" />
+                <ChevronLeft className="w-4 h-4 shrink-0" />
+                Documentos
               </button>
-              {originalAttachment?.url && attachmentSupportsPreview(originalAttachment.mime_type, originalAttachment.file_name) && (
-                <button type="button" onClick={() => setOriginalPreviewOpen(true)} className="inline-flex items-center gap-1.5 h-8 px-3 text-xs font-medium rounded-md border border-[var(--accent)]/40 bg-[var(--accent)]/10 text-[var(--accent)] hover:bg-[var(--accent)]/15 transition-colors shrink-0">
-                  <BookOpen className="w-3.5 h-3.5" />Leer original
-                </button>
-              )}
-              {originalAttachment?.url && (
-                <a href={originalAttachment.url} target="_blank" rel="noopener noreferrer" download={originalAttachment.file_name} className="inline-flex items-center gap-1.5 h-8 px-3 text-xs font-medium rounded-md border border-[var(--border)] bg-[var(--card)] text-[var(--foreground)] hover:bg-[var(--muted)] transition-colors shrink-0">
-                  <Download className="w-3.5 h-3.5" />Descargar
-                </a>
-              )}
-              {canEdit && (
-                <Button size="sm" onClick={() => navigate(`/documentos/${doc.id}/editar`)}>
-                  <Edit className="w-4 h-4" />Editar
-                </Button>
-              )}
+
+              <div className="flex flex-wrap items-center justify-end gap-1 sm:gap-1.5">
+                <div className="flex flex-wrap items-center gap-0.5 rounded-xl border border-[var(--border)]/60 bg-[var(--muted)]/12 p-0.5 shadow-sm">
+                  {!showToc && tocHeadings.length > 0 && (
+                    <Button variant="ghost" size="icon" onClick={() => setShowToc(true)} title="Mostrar tabla de contenidos" aria-label="Mostrar TOC">
+                      <AlignLeft className="w-4 h-4" />
+                    </Button>
+                  )}
+                  {!showInfoPanel && !rightPanel && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setShowInfoPanel(true)}
+                      title="Mostrar panel de información"
+                      aria-label="Mostrar panel de información"
+                    >
+                      <AlignRight className="w-4 h-4" />
+                    </Button>
+                  )}
+                  <Button variant="ghost" size="icon" onClick={() => setReadingMode(true)} title="Modo lectura" aria-label="Modo lectura">
+                    <Maximize2 className="w-4 h-4" />
+                  </Button>
+                  <Button variant="ghost" size="icon" onClick={toggleFavorite} aria-label={isFavorite ? 'Quitar favorito' : 'Añadir a favoritos'}>
+                    {isFavorite ? (
+                      <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
+                    ) : (
+                      <StarOff className="w-4 h-4" />
+                    )}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setRightPanel((p) => (p === 'comments' ? null : 'comments'))}
+                    aria-label="Comentarios"
+                    title="Comentarios"
+                  >
+                    <MessageSquare className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setRightPanel((p) => (p === 'attachments' ? null : 'attachments'))}
+                    aria-label="Adjuntos"
+                    title="Adjuntos"
+                  >
+                    <Paperclip className="w-4 h-4" />
+                  </Button>
+                  {canEdit && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setRightPanel((p) => (p === 'versions' ? null : 'versions'))}
+                      aria-label="Versiones"
+                      title="Historial de versiones"
+                    >
+                      <History className="w-4 h-4" />
+                    </Button>
+                  )}
+                </div>
+
+                <DropdownMenu.Root>
+                  <DropdownMenu.Trigger asChild>
+                    <Button type="button" variant="outline" size="icon" className="shrink-0" aria-label="Más opciones" title="Más opciones">
+                      <MoreHorizontal className="w-4 h-4" />
+                    </Button>
+                  </DropdownMenu.Trigger>
+                  <DropdownMenu.Portal>
+                    <DropdownMenu.Content
+                      className="z-[300] min-w-[12rem] rounded-xl border border-[var(--border)] bg-[var(--popover)] p-1 shadow-xl"
+                      sideOffset={6}
+                      align="end"
+                    >
+                      <DropdownMenu.Item
+                        className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-sm outline-none hover:bg-[var(--muted)] focus:bg-[var(--muted)]"
+                        onSelect={() => {
+                          copy(window.location.href);
+                          toast.success('Enlace copiado');
+                        }}
+                      >
+                        <Link2 className="h-4 w-4 shrink-0 text-[var(--muted-foreground)]" />
+                        Copiar enlace
+                      </DropdownMenu.Item>
+                    </DropdownMenu.Content>
+                  </DropdownMenu.Portal>
+                </DropdownMenu.Root>
+              </div>
             </div>
+
+            {(originalAttachment?.url || canEdit) && (
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between rounded-xl border border-[var(--border)]/55 bg-[color-mix(in_srgb,var(--card)_88%,transparent)] px-3 py-2.5 shadow-[0_1px_0_rgba(255,255,255,0.04)_inset] dark:bg-[color-mix(in_srgb,var(--card)_55%,transparent)] dark:shadow-none">
+                <span className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--muted-foreground)] shrink-0">
+                  Acciones del documento
+                </span>
+                <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                  {originalAttachment?.url && attachmentSupportsPreview(originalAttachment.mime_type, originalAttachment.file_name) && (
+                    <button
+                      type="button"
+                      onClick={() => setOriginalPreviewOpen(true)}
+                      className="inline-flex items-center gap-1.5 h-9 px-3 text-xs font-medium rounded-lg border border-[var(--accent)]/45 bg-[color-mix(in_srgb,var(--accent)_12%,transparent)] text-[var(--accent)] hover:bg-[color-mix(in_srgb,var(--accent)_18%,transparent)] transition-colors shrink-0"
+                    >
+                      <BookOpen className="w-3.5 h-3.5" />
+                      Leer original
+                    </button>
+                  )}
+                  {originalAttachment?.url && (
+                    <a
+                      href={originalAttachment.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      download={originalAttachment.file_name}
+                      className="inline-flex items-center justify-center gap-1.5 h-9 px-3 text-xs font-medium rounded-lg border border-[var(--border)] bg-[var(--card)] text-[var(--foreground)] hover:bg-[var(--muted)]/50 transition-colors shrink-0"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      Descargar
+                    </a>
+                  )}
+                  {canEdit && (
+                    <Button size="sm" className="h-9 shrink-0" onClick={() => navigate(`/documentos/${doc.id}/editar`)}>
+                      <Edit className="w-4 h-4" />
+                      Editar
+                    </Button>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Title & Meta */}
-          <div className="mb-8">
-            <div className="flex items-center gap-2 mb-3">
+          <div className="mb-8 max-w-[min(48rem,100%)]">
+            <div className="mb-3 flex flex-wrap items-center gap-2">
               <StatusBadge status={doc.status} />
               {doc.category && (
-                <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: `${doc.category.color}20`, color: doc.category.color }}>
+                <span className="rounded-full px-2 py-0.5 text-xs font-medium" style={{ background: `${doc.category.color}20`, color: doc.category.color }}>
                   {doc.category.name}
                 </span>
               )}
             </div>
 
-            <div className="mb-4 rounded-lg border border-[var(--border)] bg-[var(--muted)]/30 px-3 py-2">
+            <div className="mb-4 rounded-xl border border-[var(--border)]/40 bg-[var(--muted)]/12 px-3 py-2.5">
               <DocumentHealthStrip title={doc.title} categoryId={doc.category_id ?? ''} summary={doc.summary} status={doc.status} updatedAt={doc.updated_at} />
             </div>
 
-            <h1 className="text-3xl font-bold tracking-tight text-[var(--foreground)] leading-tight mb-4">
+            <h1 className="mb-4 text-balance text-3xl font-bold leading-[1.15] tracking-tight text-[var(--foreground)] sm:text-[2.125rem] sm:leading-tight">
               {doc.title}
             </h1>
 
-            <div className="flex flex-wrap items-center gap-4 text-sm text-[var(--muted-foreground)]">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-[var(--muted-foreground)] sm:text-[0.8125rem]">
               {doc.author && (
-                <div className="flex items-center gap-1.5">
+                <div
+                  className="flex items-center gap-1.5"
+                  title={doc.author.email ? `Correo: ${formatPrivacyEmail(doc.author.email)}` : doc.author.full_name}
+                >
                   <Avatar name={doc.author.full_name} src={doc.author.avatar_url} size="sm" />
                   <span>{doc.author.full_name}</span>
                 </div>
@@ -483,9 +619,9 @@ export function DocumentViewPage() {
           </div>
 
           {/* Content */}
-          <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)] shadow-[var(--shadow-card)] overflow-hidden">
+          <div className="w-full overflow-x-auto border border-[var(--border)]/50 bg-gradient-to-b from-[var(--card)]/95 to-[var(--card)]/88 shadow-[0_14px_48px_-22px_rgba(15,23,42,0.18)] ring-1 ring-black/[0.04] dark:from-[var(--card)]/90 dark:to-[var(--card)]/75 dark:shadow-[0_18px_56px_-16px_rgba(0,0,0,0.55)] dark:ring-white/[0.06]">
             <article
-              className="doc-view-article ProseMirror !px-6 md:!px-10 !pt-8 !pb-12"
+              className="doc-view-article doc-view-reading ProseMirror !px-5 !pb-14 !pt-9 md:!px-10 md:!pt-10"
               dangerouslySetInnerHTML={{ __html: htmlContent }}
             />
           </div>
@@ -498,13 +634,43 @@ export function DocumentViewPage() {
       {rightPanel === 'versions' && canEdit && <VersionsPanel documentId={doc.id} onRestore={() => setRightPanel(null)} onClose={() => setRightPanel(null)} />}
 
       {/* Right info panel */}
-      {!rightPanel && (
-        <div className="w-64 border-l border-[var(--border)] bg-[var(--card)] overflow-y-auto shrink-0 hidden xl:block">
+      {!rightPanel && showInfoPanel && (
+        <div
+          ref={infoScrollRef}
+          className={cn(
+            'hidden xl:flex h-full min-h-0 w-64 shrink-0 flex-col overflow-y-auto rounded-l-2xl',
+            'border border-[var(--border)]/70 border-r-0 bg-[var(--card)]/85 backdrop-blur-sm',
+            'shadow-[-6px_0_28px_-14px_rgba(15,23,42,0.35)] dark:shadow-[-8px_0_36px_-12px_rgba(0,0,0,0.55)]',
+            'doc-view-scrollbar-autohide',
+            infoScrollbarClass,
+          )}
+        >
+          <div className="flex items-center justify-between px-4 py-3.5 border-b border-[var(--border)]/70 shrink-0">
+            <span className="text-[11px] font-semibold text-[var(--muted-foreground)] uppercase tracking-[0.12em]">
+              Información
+            </span>
+            <button
+              type="button"
+              onClick={() => setShowInfoPanel(false)}
+              className="p-1 rounded-md hover:bg-[var(--muted)]/80 text-[var(--muted-foreground)] transition-colors"
+              aria-label="Ocultar panel de información"
+              title="Ocultar información"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
           <div className="p-4 space-y-6">
             <div>
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--muted-foreground)] mb-3">Información</h3>
               <div className="space-y-3 text-sm">
                 <InfoRow icon={User} label="Autor" value={doc.author?.full_name ?? '—'} />
+                {doc.author?.email ? (
+                  <InfoRow
+                    icon={Mail}
+                    label="Correo (privacidad)"
+                    value={formatPrivacyEmail(doc.author.email)}
+                    title={doc.author.email}
+                  />
+                ) : null}
                 <InfoRow icon={Clock} label="Creado" value={formatDate(doc.created_at)} />
                 <InfoRow icon={Clock} label="Modificado" value={formatRelativeTime(doc.updated_at)} />
                 <InfoRow icon={Eye} label="Vistas" value={String(doc.view_count)} />
@@ -545,13 +711,15 @@ export function DocumentViewPage() {
   );
 }
 
-function InfoRow({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: string }) {
+function InfoRow({ icon: Icon, label, value, title }: { icon: React.ElementType; label: string; value: string; title?: string }) {
   return (
     <div className="flex items-start gap-2">
       <Icon className="w-3.5 h-3.5 text-[var(--muted-foreground)] mt-0.5 shrink-0" />
       <div>
         <p className="text-xs text-[var(--muted-foreground)]">{label}</p>
-        <p className="text-sm text-[var(--foreground)]">{value}</p>
+        <p className="text-sm text-[var(--foreground)]" title={title}>
+          {value}
+        </p>
       </div>
     </div>
   );

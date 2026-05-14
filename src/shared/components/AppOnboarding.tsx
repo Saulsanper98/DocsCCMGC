@@ -60,6 +60,7 @@ export function AppOnboarding() {
   const [run, setRun] = useState(false);
   const mdUp = useMdUp();
   const joyColors = useJoyrideThemeColors();
+  const user = useAppStore((s) => s.user);
 
   useEffect(() => {
     try {
@@ -97,14 +98,33 @@ export function AppOnboarding() {
       content: isCopilotUiEnabled()
         ? 'Accede a Documentos, Copilot, mapa de conocimiento y más. Puedes reordenar enlaces con el asa ⋮⋮.'
         : 'Accede a Documentos, búsqueda, mapa de conocimiento y más. Puedes reordenar enlaces con el asa ⋮⋮.',
+      skipBeacon: true,
     };
     const main = {
       target: '[data-tour="main-content"]',
       title: 'Área de trabajo',
       content: 'Aquí verás listas, el editor y el resto de pantallas. Consulta Ayuda para atajos.',
+      skipBeacon: true,
     };
-    return mdUp ? [search, sidebar, main] : [search, main];
-  }, [mdUp]);
+    const adminBlock = {
+      target: '[data-tour="sidebar-admin"]',
+      title: 'Administración',
+      content: 'Como administrador, desde aquí accedes a usuarios y ajustes del sistema.',
+      skipBeacon: true,
+    };
+
+    if (mdUp) {
+      const core = [search, sidebar];
+      if (user?.role === 'admin') core.push(adminBlock);
+      core.push(main);
+      return core;
+    }
+
+    const mobileCore = [search];
+    if (user?.role === 'admin') mobileCore.push(adminBlock);
+    mobileCore.push(main);
+    return mobileCore;
+  }, [mdUp, user?.role]);
 
   return (
     <Joyride

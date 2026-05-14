@@ -85,7 +85,12 @@ export function useDocuments(options: UseDocumentsOptions = {}) {
       }
 
       if (options.search) {
-        query = query.ilike('title', `%${options.search}%`);
+        const raw = options.search.trim().replace(/,/g, ' ');
+        if (raw) {
+          const escaped = raw.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_');
+          const p = `%${escaped}%`;
+          query = query.or(`title.ilike.${p},summary.ilike.${p}`);
+        }
       }
 
       const { data, error: err } = await query;

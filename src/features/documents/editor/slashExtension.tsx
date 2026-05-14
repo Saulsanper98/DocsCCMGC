@@ -56,6 +56,9 @@ export const SlashCommands = Extension.create({
                 arrow: false,
                 theme: 'slash-ccmgc',
                 zIndex: 9999,
+                offset: [0, 10],
+                moveTransition: 'transform 0.12s ease-out',
+                duration: [180, 140],
               });
             },
             onUpdate(props) {

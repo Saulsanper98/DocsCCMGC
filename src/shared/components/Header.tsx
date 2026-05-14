@@ -1,4 +1,4 @@
-import { Search, Moon, Sun, Bell, Plus, Menu } from 'lucide-react';
+import { Search, Bell, Plus, Menu, StickyNote } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '@/app/store';
 import { CcmgcBrandLogo } from '@/shared/components/CcmgcBrandLogo';
@@ -6,6 +6,9 @@ import { Button } from './ui/Button';
 import { cn } from '@/shared/utils/cn';
 import { useEffect, useRef, useState } from 'react';
 import { formatSearchShortcut } from '@/shared/utils/platform';
+import { ComfortMenu } from '@/shared/components/ComfortMenu';
+import { buildEnvSuffix } from '@/shared/utils/buildEnv';
+import { formatRelativeTime } from '@/shared/utils/format';
 
 const SEARCH_HINTS = [
   'Buscar por título o resumen…',
@@ -15,15 +18,14 @@ const SEARCH_HINTS = [
 ] as const;
 
 export function Header() {
-  const { theme, setTheme, setCommandPaletteOpen, unreadCount, setMobileDrawerOpen } = useAppStore();
+  const { setCommandPaletteOpen, unreadCount, setMobileDrawerOpen, user, mobileDrawerOpen, setQuickNoteModalOpen } =
+    useAppStore();
   const navigate = useNavigate();
   const [scrolled, setScrolled] = useState(false);
   const [badgePop, setBadgePop] = useState(false);
   const [hintIndex, setHintIndex] = useState(0);
   const bellRef = useRef<HTMLSpanElement>(null);
   const prevUnreadRef = useRef(unreadCount);
-
-  const isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
 
   useEffect(() => {
     const main = document.getElementById('main-content');
@@ -42,17 +44,6 @@ export function Header() {
   }, [unreadCount]);
 
   useEffect(() => {
-    if (theme === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else if (theme === 'light') {
-      document.documentElement.classList.remove('dark');
-    } else {
-      const mq = window.matchMedia('(prefers-color-scheme: dark)');
-      document.documentElement.classList.toggle('dark', mq.matches);
-    }
-  }, [theme]);
-
-  useEffect(() => {
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (reduce) return;
     const t = window.setInterval(() => {
@@ -61,14 +52,12 @@ export function Header() {
     return () => window.clearInterval(t);
   }, []);
 
-  function toggleTheme() {
-    setTheme(isDark ? 'light' : 'dark');
-  }
+  const envLabel = buildEnvSuffix();
 
   return (
     <header
       className={cn(
-        'flex items-center gap-2 sm:gap-3 px-3 sm:px-4 border-b border-[var(--divider-faint)] bg-[var(--background)]/95 backdrop-blur-sm shrink-0 rounded-b-[length:var(--radius-shell)]',
+        'flex items-center gap-2 sm:gap-3 px-3 sm:px-4 border-b border-[var(--divider-faint)] bg-[var(--background)]/95 backdrop-blur-sm shrink-0',
         'transition-all duration-200',
         scrolled ? 'h-11 shadow-sm elev-1' : 'h-14',
       )}
@@ -78,6 +67,8 @@ export function Header() {
         size="icon"
         className="md:hidden shrink-0 min-h-11 min-w-11"
         onClick={() => setMobileDrawerOpen(true)}
+        aria-expanded={mobileDrawerOpen}
+        aria-controls="app-sidebar-nav"
         aria-label="Abrir menú de navegación"
       >
         <Menu className="h-5 w-5" strokeWidth={2} />
@@ -86,16 +77,11 @@ export function Header() {
       <div
         className={cn(
           'md:hidden flex shrink-0 items-center transition-all duration-200',
-          !isDark && 'rounded-[length:var(--radius-shell)] bg-[#0c1222] px-1.5 py-1 ring-1 ring-black/20',
           scrolled && 'scale-90',
         )}
         aria-hidden
       >
-        <CcmgcBrandLogo
-          variant="header"
-          className="max-w-[72px]"
-          blendWithBackground={isDark}
-        />
+        <CcmgcBrandLogo variant="header" className="max-w-[72px]" blendWithBackground />
       </div>
 
       <button
@@ -111,18 +97,38 @@ export function Header() {
           scrolled ? 'h-8' : 'h-9',
         )}
         aria-label="Abrir búsqueda"
+        title={`Búsqueda global (${formatSearchShortcut()})`}
       >
         <Search className="h-4 w-4 shrink-0" strokeWidth={2} />
         <span className="flex-1 text-left transition-opacity duration-300 motion-reduce:transition-none" key={hintIndex}>
           {SEARCH_HINTS[hintIndex]}
           <span className="sr-only"> {formatSearchShortcut()} </span>
         </span>
-        <kbd className="hidden sm:inline-flex h-5 px-1.5 rounded border border-[var(--border)] text-[10px] font-mono tabular-nums bg-[var(--background)] text-[var(--muted-foreground)]">
+        <kbd className="hidden sm:inline-flex h-5 min-w-[3.25rem] shrink-0 items-center justify-center rounded border border-[var(--border)] px-1.5 text-[10px] font-medium font-mono tabular-nums leading-none bg-[var(--background)] text-[var(--muted-foreground)]">
           {formatSearchShortcut()}
         </kbd>
       </button>
 
       <div className="mx-0.5 hidden h-7 w-px shrink-0 bg-[var(--divider-faint)] sm:block" role="presentation" aria-hidden />
+
+      {envLabel ? (
+        <span
+          className="hidden shrink-0 rounded-md px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-950 ring-1 ring-amber-500/40 bg-amber-400/20 dark:bg-amber-500/15 dark:text-amber-100 md:inline-flex"
+          title="Entorno de ejecución (no producción)"
+        >
+          {envLabel}
+        </span>
+      ) : null}
+
+      {user?.last_active ? (
+        <span className="hidden max-w-[10rem] truncate text-[10px] text-[var(--muted-foreground)] xl:inline" title={user.last_active}>
+          Activo {formatRelativeTime(user.last_active)}
+        </span>
+      ) : null}
+
+      <ComfortMenu />
+
+      <div className="mx-0.5 hidden h-7 w-px shrink-0 bg-[var(--divider-faint)] lg:block" role="presentation" aria-hidden />
 
       <div className="flex items-center gap-0.5 sm:gap-1 ml-auto">
         <Button
@@ -134,6 +140,18 @@ export function Header() {
           title="Nuevo documento (Ctrl+N)"
         >
           <Plus className="h-4 w-4" strokeWidth={2} />
+        </Button>
+
+        <Button
+          variant="ghost"
+          size="icon"
+          className="min-h-10 min-w-10 sm:min-h-9 sm:min-w-9"
+          onClick={() => setQuickNoteModalOpen(true)}
+          aria-label="Nueva nota rápida"
+          title="Nota rápida (Ctrl+Mayús+N)"
+          data-tour="header-quick-note"
+        >
+          <StickyNote className="h-4 w-4" strokeWidth={2} />
         </Button>
 
         <Button
@@ -158,23 +176,6 @@ export function Header() {
           )}
         </Button>
 
-        <div className="mx-0.5 hidden h-7 w-px shrink-0 bg-[var(--divider-faint)] sm:block" role="presentation" aria-hidden />
-
-        <Button
-          variant="ghost"
-          size="icon"
-          className="min-h-10 min-w-10 sm:min-h-9 sm:min-w-9 overflow-hidden"
-          onClick={toggleTheme}
-          aria-label={isDark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
-          title={isDark ? 'Modo claro' : 'Modo oscuro'}
-        >
-          <span
-            key={isDark ? 'dark' : 'light'}
-            className="inline-flex motion-reduce:animate-none animate-[spinIn_250ms_var(--ease-spring)]"
-          >
-            {isDark ? <Sun className="h-4 w-4" strokeWidth={2} /> : <Moon className="h-4 w-4" strokeWidth={2} />}
-          </span>
-        </Button>
       </div>
     </header>
   );

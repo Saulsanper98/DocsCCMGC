@@ -31,7 +31,7 @@ const statusConfig: Record<DocumentStatus, { label: string; variant: BadgeProps[
   archived: { label: 'Archivado', variant: 'outline' },
 };
 
-export function StatusBadge({ status }: { status: DocumentStatus }) {
+export function StatusBadge({ status, className }: { status: DocumentStatus; className?: string }) {
   const config = statusConfig[status];
-  return <Badge variant={config.variant}>{config.label}</Badge>;
+  return <Badge variant={config.variant} className={className}>{config.label}</Badge>;
 }

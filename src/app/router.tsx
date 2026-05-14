@@ -42,6 +42,12 @@ const KnowledgeMapPage = lazy(() =>
 const ShiftPanelPage = lazy(() =>
   import('@/features/shift/ShiftPanelPage').then((m) => ({ default: m.ShiftPanelPage })),
 );
+const DevUiPage = lazy(() =>
+  import('@/features/dev/DevUiPage').then((m) => ({ default: m.DevUiPage })),
+);
+const ProfilePage = lazy(() =>
+  import('@/features/profile/ProfilePage').then((m) => ({ default: m.ProfilePage })),
+);
 
 function LoginSuspense() {
   return (
@@ -83,8 +89,27 @@ export const router = createBrowserRouter([
       { path: '/usuarios', element: <Navigate to="/admin" replace /> },
       { path: '/admin', element: <AdminPage /> },
       { path: '/ayuda', element: <HelpPage /> },
+      { path: '/perfil', element: <ProfilePage /> },
       { path: '/mapa', element: <KnowledgeMapPage /> },
       { path: '/turno', element: <ShiftPanelPage /> },
+      ...(import.meta.env.DEV
+        ? [
+            {
+              path: '/dev/ui',
+              element: (
+                <Suspense
+                  fallback={
+                    <div className="flex min-h-[40vh] items-center justify-center bg-[var(--background)]">
+                      <div className="h-8 w-8 rounded-full border-2 border-[var(--border)] border-t-[var(--accent)] animate-spin motion-reduce:animate-none" />
+                    </div>
+                  }
+                >
+                  <DevUiPage />
+                </Suspense>
+              ),
+            },
+          ]
+        : []),
     ],
   },
 ]);

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Bot, FileText, Clock, X } from 'lucide-react';
 import Fuse from 'fuse.js';
@@ -11,6 +11,7 @@ import { Input } from '@/shared/components/ui/Input';
 import { Avatar } from '@/shared/components/ui/Avatar';
 import { StatusBadge } from '@/shared/components/ui/Badge';
 import { formatRelativeTime } from '@/shared/utils/format';
+import { toastSupabaseError } from '@/shared/utils/supabaseToast';
 import { cn } from '@/shared/utils/cn';
 import type { Document } from '@/shared/types';
 
@@ -19,6 +20,7 @@ type SearchScope = 'all' | 'title';
 export function SearchPage() {
   const navigate = useNavigate();
   const [query, setQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
   const [results, setResults] = useState<Document[]>([]);
   const [allDocs, setAllDocs] = useState<Document[]>([]);
   const [aiAnswer, setAiAnswer] = useState<string | null>(null);
@@ -27,11 +29,29 @@ export function SearchPage() {
   const [searchScope, setSearchScope] = useState<SearchScope>('all');
   const fuseRef = useRef<Fuse<Document> | null>(null);
 
+  const fetchAllDocuments = useCallback(async () => {
+    const { data, error } = await supabase
+      .from('documents')
+      .select(
+        '*, author:profiles!author_id(id,full_name,avatar_url), category:categories!category_id(id,name,color,icon)'
+      )
+      .eq('status', 'published')
+      .order('view_count', { ascending: false });
+
+    if (error) {
+      toastSupabaseError('No se pudieron cargar los documentos publicados', error, () => {
+        void fetchAllDocuments();
+      });
+      return;
+    }
+    setAllDocs((data ?? []) as Document[]);
+  }, []);
+
   useEffect(() => {
-    fetchAllDocuments();
+    void fetchAllDocuments();
     const stored = localStorage.getItem('docbrain-recent-searches');
     if (stored) setRecentSearches(JSON.parse(stored));
-  }, []);
+  }, [fetchAllDocuments]);
 
   useEffect(() => {
     if (allDocs.length === 0) return;
@@ -42,29 +62,26 @@ export function SearchPage() {
     });
   }, [allDocs, searchScope]);
 
-  async function fetchAllDocuments() {
-    const { data } = await supabase
-      .from('documents')
-      .select(
-        '*, author:profiles!author_id(id,full_name,avatar_url), category:categories!category_id(id,name,color,icon)'
-      )
-      .eq('status', 'published')
-      .order('view_count', { ascending: false });
-
-    setAllDocs((data ?? []) as Document[]);
-  }
+  useEffect(() => {
+    const q = query.trim();
+    if (!q) {
+      setDebouncedQuery('');
+      return;
+    }
+    const t = window.setTimeout(() => setDebouncedQuery(q), 240);
+    return () => window.clearTimeout(t);
+  }, [query]);
 
   useEffect(() => {
-    if (!query.trim()) {
+    if (!debouncedQuery) {
       setResults([]);
       return;
     }
-
     if (fuseRef.current) {
-      const searchResults = fuseRef.current.search(query).map((r) => r.item);
+      const searchResults = fuseRef.current.search(debouncedQuery).map((r) => r.item);
       setResults(searchResults);
     }
-  }, [query]);
+  }, [debouncedQuery]);
 
   function saveSearch(q: string) {
     const recent = [q, ...recentSearches.filter((s) => s !== q)].slice(0, 8);
@@ -99,9 +116,11 @@ export function SearchPage() {
     }
   }
 
+  const searchPending = !!(query.trim() && query.trim() !== debouncedQuery);
+
   return (
-    <div className="max-w-3xl mx-auto px-6 py-8">
-      <h1 className="text-2xl font-bold tracking-tight text-[var(--foreground)] mb-6">Búsqueda</h1>
+    <div className="app-page-x w-full max-w-none py-8">
+      <h1 className="app-page-title text-2xl font-bold tracking-tight text-[var(--foreground)] mb-6">Búsqueda</h1>
 
       <div
         className="flex flex-wrap gap-2 mb-4"
@@ -179,29 +198,44 @@ export function SearchPage() {
       )}
 
       {/* Results */}
-      {query && (
+      {query.trim() && (
         <div className="mb-2">
-          <p className="text-sm text-[var(--muted-foreground)] mb-3">
-            {results.length} resultado{results.length !== 1 ? 's' : ''} para "<strong>{query}</strong>"
-          </p>
-          {results.length === 0 ? (
-            <div className="text-center py-12 text-[var(--muted-foreground)]">
-              <Search className="w-12 h-12 mx-auto mb-3 opacity-20" />
-              <p className="text-sm">No se encontraron documentos.</p>
-              <p className="text-xs mt-1">Intenta con otras palabras clave{isCopilotUiEnabled() ? ' o usa la búsqueda con IA.' : '.'}</p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {results.map((doc) => (
-                <SearchResult key={doc.id} doc={doc} query={query} onClick={() => navigate(`/documentos/${doc.id}`)} />
-              ))}
-            </div>
+          {searchPending && (
+            <p className="text-xs text-[var(--muted-foreground)] mb-2 motion-reduce:transition-none" aria-live="polite">
+              Actualizando resultados…
+            </p>
+          )}
+          {!searchPending && debouncedQuery && (
+            <>
+              <p className="text-sm text-[var(--muted-foreground)] mb-3">
+                {results.length} resultado{results.length !== 1 ? 's' : ''} para "
+                <strong>{debouncedQuery}</strong>"
+              </p>
+              {results.length === 0 ? (
+                <div className="text-center py-12 text-[var(--muted-foreground)]">
+                  <Search className="w-12 h-12 mx-auto mb-3 opacity-20" />
+                  <p className="text-sm">No se encontraron documentos.</p>
+                  <p className="text-xs mt-1">Intenta con otras palabras clave{isCopilotUiEnabled() ? ' o usa la búsqueda con IA.' : '.'}</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {results.map((doc) => (
+                    <SearchResult
+                      key={doc.id}
+                      doc={doc}
+                      query={debouncedQuery}
+                      onClick={() => navigate(`/documentos/${doc.id}`)}
+                    />
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </div>
       )}
 
       {/* Empty state / suggestions */}
-      {!query && (
+      {!query.trim() && (
         <div className="space-y-6">
           {recentSearches.length > 0 && (
             <div>

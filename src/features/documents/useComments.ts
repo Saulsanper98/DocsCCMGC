@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAppStore } from '@/app/store';
 import type { Comment } from '@/shared/types';
@@ -24,28 +24,46 @@ export function useComments(documentId: string) {
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (documentId) {
-      fetch();
-      // Realtime subscription
-      const channel = supabase
-        .channel(`comments:${documentId}`)
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'comments', filter: `document_id=eq.${documentId}` }, () => fetch())
-        .subscribe();
-      return () => { supabase.removeChannel(channel); };
-    }
-  }, [documentId]);
+  /** `silent`: no pone la lista en estado de carga (evita parpadeos tras mutaciones o realtime). */
+  const reload = useCallback(
+    async (silent = false) => {
+      if (!documentId) return;
+      if (!silent) setLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('comments')
+          .select('*, author:profiles!author_id(id,full_name,avatar_url)')
+          .eq('document_id', documentId)
+          .order('created_at', { ascending: true });
+        if (error) {
+          if (!silent) toast.error('No se pudieron cargar los comentarios');
+          return;
+        }
+        if (data) setComments(nestComments(data as Comment[]));
+      } finally {
+        if (!silent) setLoading(false);
+      }
+    },
+    [documentId],
+  );
 
-  async function fetch() {
-    setLoading(true);
-    const { data } = await supabase
-      .from('comments')
-      .select('*, author:profiles!author_id(id,full_name,avatar_url)')
-      .eq('document_id', documentId)
-      .order('created_at', { ascending: true });
-    if (data) setComments(nestComments(data as Comment[]));
-    setLoading(false);
-  }
+  useEffect(() => {
+    if (!documentId) return;
+    void reload(false);
+    const channel = supabase
+      .channel(`comments:${documentId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'comments', filter: `document_id=eq.${documentId}` },
+        () => {
+          void reload(true);
+        },
+      )
+      .subscribe();
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [documentId, reload]);
 
   async function addComment(content: string, parentId?: string, anchorText?: string) {
     if (!user || !content.trim()) return;
@@ -56,7 +74,11 @@ export function useComments(documentId: string) {
       content: content.trim(),
       anchor_text: anchorText ?? null,
     });
-    if (error) toast.error('Error al añadir comentario');
+    if (error) {
+      toast.error('Error al añadir comentario');
+      return;
+    }
+    await reload(true);
   }
 
   async function resolveComment(id: string) {
@@ -65,13 +87,21 @@ export function useComments(documentId: string) {
       .from('comments')
       .update({ is_resolved: true, resolved_by: user.id, resolved_at: new Date().toISOString() })
       .eq('id', id);
-    if (error) toast.error('Error al resolver comentario');
-    else toast.success('Comentario resuelto');
+    if (error) {
+      toast.error('Error al resolver comentario');
+      return;
+    }
+    toast.success('Comentario resuelto');
+    await reload(true);
   }
 
   async function deleteComment(id: string) {
     const { error } = await supabase.from('comments').delete().eq('id', id);
-    if (error) toast.error('Error al eliminar comentario');
+    if (error) {
+      toast.error('Error al eliminar comentario');
+      return;
+    }
+    await reload(true);
   }
 
   return { comments, loading, addComment, resolveComment, deleteComment };

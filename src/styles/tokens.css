@@ -122,7 +122,7 @@
   --radius-shell: 12px;
 
   --overlay-scrim: rgba(15, 23, 42, 0.48);
-  --page-gutter: 1.25rem;
+  --page-gutter: clamp(0.75rem, 1.5vw, 1.125rem);
 
   /**
    * brand-* = identidad CCMGC; accent/primary = interacción (botones, enlaces).

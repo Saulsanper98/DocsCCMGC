@@ -130,7 +130,7 @@ export function AdminPage() {
   }
 
   return (
-    <div className="mx-auto flex min-h-0 w-full max-w-6xl flex-1 flex-col gap-6 p-4 sm:p-6">
+    <div className="app-page-x flex min-h-0 w-full max-w-none flex-1 flex-col gap-6 py-4 sm:py-6">
       <header className="shrink-0 space-y-1">
         <h1 className="text-2xl font-bold tracking-tight text-[var(--foreground)]">Administración</h1>
         <p className="max-w-2xl text-sm text-[var(--muted-foreground)]">

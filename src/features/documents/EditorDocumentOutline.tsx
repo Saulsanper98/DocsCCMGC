@@ -205,10 +205,10 @@ export function EditorDocumentOutline({
   return (
     <>
       <nav
-        className="hidden md:flex flex-col w-[15.5rem] shrink-0 border-r border-[var(--border)] bg-[var(--card)]/60 overflow-y-auto py-4 px-2 min-h-0 shadow-[inset_-1px_0_0_rgba(148,163,184,0.08)]"
+        className="hidden md:flex flex-col w-[15.5rem] shrink-0 border-r border-[var(--border)]/40 bg-[var(--muted)]/15 overflow-y-auto py-4 px-2 min-h-0"
         aria-label="Navegación en el documento"
       >
-        <div className="sticky top-0 z-10 -mx-1 mb-3 px-2 pb-2 border-b border-[var(--border)]/80 bg-[var(--card)]/95 backdrop-blur-sm">
+        <div className="sticky top-0 z-10 -mx-1 mb-3 px-2 pb-2 border-b border-[var(--border)]/50 bg-[var(--background)]/85 backdrop-blur-sm">
           <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-[var(--muted-foreground)]">
             <ListTree className="w-4 h-4 shrink-0 text-[var(--accent)]" aria-hidden />
             En el documento

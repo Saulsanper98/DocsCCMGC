@@ -90,7 +90,7 @@ export function NotificationsPage() {
   }, [notifications]);
 
   return (
-    <div className="max-w-2xl mx-auto px-6 py-8">
+    <div className="app-page-x w-full max-w-none py-8">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-[var(--foreground)]">Notificaciones</h1>

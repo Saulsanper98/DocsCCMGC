@@ -28,6 +28,8 @@ import {
   PanelLeftClose,
   MousePointerClick,
   Check,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import { CcmgcBrandLogo } from '@/shared/components/CcmgcBrandLogo';
 import { AppTooltip } from '@/shared/components/AppTooltip';
@@ -197,6 +199,7 @@ function SortableNavRow({
             <NavLink
               to={item.to}
               end={end}
+              prefetch="intent"
               onClick={() => onNavigate?.()}
               className={({ isActive }) =>
                 cn(
@@ -216,6 +219,7 @@ function SortableNavRow({
         <NavLink
           to={item.to}
           end={end}
+          prefetch="intent"
           onClick={() => onNavigate?.()}
           className={({ isActive }) =>
             cn(
@@ -376,13 +380,33 @@ export function Sidebar() {
     sidebarNavOrderAdmin,
     setSidebarNavOrderMain,
     setSidebarNavOrderAdmin,
+    theme,
+    setTheme,
   } = useAppStore();
   const { signOut } = useAuth();
   const navigate = useNavigate();
 
   const [isMobileViewport, setIsMobileViewport] = useState(false);
   const [modeMenuOpen, setModeMenuOpen] = useState(false);
+  const [isDark, setIsDark] = useState(false);
   const leaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    const apply = () => {
+      if (theme === 'dark') setIsDark(true);
+      else if (theme === 'light') setIsDark(false);
+      else setIsDark(window.matchMedia('(prefers-color-scheme: dark)').matches);
+    };
+    apply();
+    if (theme !== 'system') return undefined;
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    mq.addEventListener('change', apply);
+    return () => mq.removeEventListener('change', apply);
+  }, [theme]);
+
+  const toggleTheme = useCallback(() => {
+    setTheme(isDark ? 'light' : 'dark');
+  }, [isDark, setTheme]);
 
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 767px)');
@@ -450,6 +474,7 @@ export function Sidebar() {
 
   return (
     <aside
+      id="app-sidebar-nav"
       aria-label="Navegación principal"
       onPointerEnter={onAsidePointerEnter}
       onPointerLeave={onAsidePointerLeave}
@@ -503,8 +528,8 @@ export function Sidebar() {
               setMobileDrawerOpen(false);
             }}
             className={cn(
-              'flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] py-2 text-left text-xs text-white/70',
-              'transition-colors hover:border-white/20 hover:bg-white/[0.07] hover:text-white/90',
+              'flex items-center gap-2 rounded-lg bg-white/[0.06] py-2 text-left text-xs text-white/70',
+              'transition-colors hover:bg-white/[0.11] hover:text-white/95',
               railLabelsCollapsed ? 'size-10 shrink-0 justify-center px-0' : 'w-full px-2.5',
             )}
             title={railLabelsCollapsed ? undefined : 'Buscar (Ctrl+K)'}
@@ -514,7 +539,7 @@ export function Sidebar() {
             {!railLabelsCollapsed && (
               <>
                 <span className="flex-1 truncate">Buscar…</span>
-                <kbd className="hidden shrink-0 rounded border border-white/15 px-1 py-0.5 font-mono text-[10px] text-white/50 lg:inline">
+                <kbd className="hidden shrink-0 rounded bg-white/10 px-1 py-0.5 font-mono text-[10px] text-white/50 lg:inline">
                   Ctrl K
                 </kbd>
               </>
@@ -544,15 +569,17 @@ export function Sidebar() {
         />
 
         {isAdmin && (
-          <SidebarSortableBlock
-            sectionId="sidebar-admin"
-            title="Administración"
-            defs={adminDefs}
-            orderedIds={adminIds}
-            setOrderedIds={persistAdmin}
-            collapsed={railLabelsCollapsed}
-            onNavigate={() => setMobileDrawerOpen(false)}
-          />
+          <div data-tour="sidebar-admin">
+            <SidebarSortableBlock
+              sectionId="sidebar-admin"
+              title="Administración"
+              defs={adminDefs}
+              orderedIds={adminIds}
+              setOrderedIds={persistAdmin}
+              collapsed={railLabelsCollapsed}
+              onNavigate={() => setMobileDrawerOpen(false)}
+            />
+          </div>
         )}
       </nav>
 
@@ -562,6 +589,126 @@ export function Sidebar() {
           railLabelsCollapsed ? 'flex flex-col items-center px-0 py-2' : 'p-2',
         )}
       >
+        <SidebarFlyout
+          collapsed={railLabelsCollapsed}
+          title={isDark ? 'Modo claro' : 'Modo oscuro'}
+          description="Apariencia de la aplicación"
+        >
+          <button
+            type="button"
+            onClick={toggleTheme}
+            className={cn(
+              'flex min-h-[44px] items-center gap-2 rounded-lg py-2 text-sm text-[var(--sidebar-fg)] transition-colors md:min-h-0',
+              'cursor-pointer hover:bg-[var(--sidebar-hover)] hover:text-white',
+              railLabelsCollapsed ? 'box-border size-11 shrink-0 justify-center px-0 md:size-10' : 'w-full px-2',
+            )}
+            aria-label={isDark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
+          >
+            {isDark ? (
+              <Sun className="h-4 w-4 shrink-0" strokeWidth={2} aria-hidden />
+            ) : (
+              <Moon className="h-4 w-4 shrink-0" strokeWidth={2} aria-hidden />
+            )}
+            {!railLabelsCollapsed && <span className="truncate">Tema</span>}
+          </button>
+        </SidebarFlyout>
+
+        <DropdownMenu.Root
+          modal={false}
+          onOpenChange={(open) => {
+            setModeMenuOpen(open);
+            if (!open && sidebarMode === 'hover') {
+              scheduleHoverLeave();
+            }
+          }}
+        >
+          {railLabelsCollapsed ? (
+            <div className="flex w-full min-w-0 justify-center">
+              <DropdownMenu.Trigger asChild>
+                <button
+                  type="button"
+                  title="Modo del menú lateral: expandido, colapsado o inteligente"
+                  className={cn(
+                    'box-border flex size-11 shrink-0 items-center justify-center rounded-lg text-sm font-medium transition-colors md:size-10',
+                    'text-[var(--sidebar-fg)] hover:bg-[var(--sidebar-hover)] hover:text-white',
+                    modeMenuOpen && 'bg-[var(--sidebar-hover)] text-white',
+                  )}
+                  aria-label="Elegir modo del menú lateral: expandido, colapsado o inteligente"
+                >
+                  <LayoutPanelLeft className="h-4 w-4" strokeWidth={2} aria-hidden />
+                </button>
+              </DropdownMenu.Trigger>
+            </div>
+          ) : (
+            <DropdownMenu.Trigger asChild>
+              <button
+                type="button"
+                className={cn(
+                  'flex w-full min-h-[44px] items-center gap-2 rounded-lg px-2 py-2 text-sm font-medium transition-colors md:min-h-0',
+                  'text-[var(--sidebar-fg)] hover:bg-[var(--sidebar-hover)] hover:text-white',
+                  modeMenuOpen && 'bg-[var(--sidebar-hover)] text-white',
+                )}
+                aria-label="Elegir modo del menú lateral"
+              >
+                <LayoutPanelLeft className="h-4 w-4 shrink-0" strokeWidth={2} aria-hidden />
+                <span className="truncate">Menú lateral</span>
+              </button>
+            </DropdownMenu.Trigger>
+          )}
+          <DropdownMenu.Portal>
+            <DropdownMenu.Content
+              side="right"
+              align="center"
+              sideOffset={10}
+              className={cn(
+                'z-[100] min-w-[240px] rounded-xl border border-[var(--border)] bg-[var(--popover)] p-1 shadow-xl outline-none',
+              )}
+              onCloseAutoFocus={(e) => e.preventDefault()}
+            >
+              <DropdownMenu.Label className="px-2 py-1.5 text-[11px] font-medium uppercase tracking-wide text-[var(--muted-foreground)]">
+                Menú lateral
+              </DropdownMenu.Label>
+              <DropdownMenu.RadioGroup
+                value={sidebarMode}
+                onValueChange={(v) => setSidebarMode(v as SidebarMode)}
+              >
+                <DropdownMenu.RadioItem value="expanded" className={modeOptionClass}>
+                  <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center text-[var(--accent)]">
+                    {sidebarMode === 'expanded' ? <Check className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden /> : null}
+                  </span>
+                  <LayoutPanelLeft className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
+                  <span className="flex flex-col gap-0.5">
+                    <span className="font-medium">Siempre expandido</span>
+                    <span className="text-[11px] font-normal text-[var(--muted-foreground)]">Ancho completo fijo</span>
+                  </span>
+                </DropdownMenu.RadioItem>
+                <DropdownMenu.RadioItem value="collapsed" className={modeOptionClass}>
+                  <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center text-[var(--accent)]">
+                    {sidebarMode === 'collapsed' ? <Check className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden /> : null}
+                  </span>
+                  <PanelLeftClose className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
+                  <span className="flex flex-col gap-0.5">
+                    <span className="font-medium">Siempre colapsado</span>
+                    <span className="text-[11px] font-normal text-[var(--muted-foreground)]">Solo iconos</span>
+                  </span>
+                </DropdownMenu.RadioItem>
+                <DropdownMenu.RadioItem value="hover" className={modeOptionClass}>
+                  <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center text-[var(--accent)]">
+                    {sidebarMode === 'hover' ? <Check className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden /> : null}
+                  </span>
+                  <MousePointerClick className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
+                  <span className="flex flex-col gap-0.5">
+                    <span className="font-medium">Inteligente</span>
+                    <span className="text-[11px] font-normal text-[var(--muted-foreground)]">
+                      Se amplía al pasar el cursor (escritorio)
+                    </span>
+                  </span>
+                </DropdownMenu.RadioItem>
+              </DropdownMenu.RadioGroup>
+            </DropdownMenu.Content>
+          </DropdownMenu.Portal>
+        </DropdownMenu.Root>
+
         <SidebarButton
           icon={Bell}
           label="Notificaciones"
@@ -622,85 +769,6 @@ export function Sidebar() {
           </SidebarFlyout>
         )}
       </div>
-
-      <DropdownMenu.Root
-        modal={false}
-        onOpenChange={(open) => {
-          setModeMenuOpen(open);
-          if (!open && sidebarMode === 'hover') {
-            scheduleHoverLeave();
-          }
-        }}
-      >
-        <DropdownMenu.Trigger asChild>
-          <button
-            type="button"
-            className={cn(
-              'absolute right-0 top-1/2 z-50 hidden h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full md:flex',
-              navCollapsed ? 'translate-x-[calc(50%+1.125rem)]' : 'translate-x-1/2',
-              'border border-white/15 bg-[var(--sidebar-bg)]/95 text-white/70 shadow-md backdrop-blur-sm',
-              'ring-1 ring-black/20 dark:ring-white/10',
-              'transition-[color,background-color,border-color,box-shadow,transform] duration-300 motion-reduce:transition-none',
-              'hover:border-white/25 hover:bg-[var(--sidebar-hover)] hover:text-white',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--sidebar-bg)]',
-            )}
-            title="Modo del menú lateral"
-            aria-label="Elegir modo del menú lateral: expandido, colapsado o inteligente"
-          >
-            <LayoutPanelLeft className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />
-          </button>
-        </DropdownMenu.Trigger>
-        <DropdownMenu.Portal>
-          <DropdownMenu.Content
-            side="right"
-            align="center"
-            sideOffset={10}
-            className={cn(
-              'z-[100] min-w-[240px] rounded-xl border border-[var(--border)] bg-[var(--popover)] p-1 shadow-xl outline-none',
-            )}
-            onCloseAutoFocus={(e) => e.preventDefault()}
-          >
-            <DropdownMenu.Label className="px-2 py-1.5 text-[11px] font-medium uppercase tracking-wide text-[var(--muted-foreground)]">
-              Menú lateral
-            </DropdownMenu.Label>
-            <DropdownMenu.RadioGroup
-              value={sidebarMode}
-              onValueChange={(v) => setSidebarMode(v as SidebarMode)}
-            >
-              <DropdownMenu.RadioItem value="expanded" className={modeOptionClass}>
-                <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center text-[var(--accent)]">
-                  {sidebarMode === 'expanded' ? <Check className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden /> : null}
-                </span>
-                <LayoutPanelLeft className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
-                <span className="flex flex-col gap-0.5">
-                  <span className="font-medium">Siempre expandido</span>
-                  <span className="text-[11px] font-normal text-[var(--muted-foreground)]">Ancho completo fijo</span>
-                </span>
-              </DropdownMenu.RadioItem>
-              <DropdownMenu.RadioItem value="collapsed" className={modeOptionClass}>
-                <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center text-[var(--accent)]">
-                  {sidebarMode === 'collapsed' ? <Check className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden /> : null}
-                </span>
-                <PanelLeftClose className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
-                <span className="flex flex-col gap-0.5">
-                  <span className="font-medium">Siempre colapsado</span>
-                  <span className="text-[11px] font-normal text-[var(--muted-foreground)]">Solo iconos</span>
-                </span>
-              </DropdownMenu.RadioItem>
-              <DropdownMenu.RadioItem value="hover" className={modeOptionClass}>
-                <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center text-[var(--accent)]">
-                  {sidebarMode === 'hover' ? <Check className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden /> : null}
-                </span>
-                <MousePointerClick className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
-                <span className="flex flex-col gap-0.5">
-                  <span className="font-medium">Inteligente</span>
-                  <span className="text-[11px] font-normal text-[var(--muted-foreground)]">Se amplía al pasar el cursor (escritorio)</span>
-                </span>
-              </DropdownMenu.RadioItem>
-            </DropdownMenu.RadioGroup>
-          </DropdownMenu.Content>
-        </DropdownMenu.Portal>
-      </DropdownMenu.Root>
     </aside>
   );
 }

@@ -104,7 +104,7 @@ export function ShiftPanelPage() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6 px-4 py-8">
+    <div className="app-page-x w-full max-w-none space-y-6 py-8">
       <Link
         to="/"
         className={cn(

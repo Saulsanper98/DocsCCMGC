@@ -47,12 +47,12 @@ export function CopilotSuggestionCard({
   return (
     <div
       className={cn(
-        'mx-4 mt-3 overflow-hidden rounded-xl border border-violet-200/90 bg-gradient-to-b from-violet-50 to-violet-100/80 shadow-sm dark:border-violet-800/80 dark:from-violet-950/50 dark:to-violet-950/20',
+        'mx-4 mt-3 overflow-hidden rounded-lg border border-violet-300/55 bg-violet-50/40 dark:border-violet-800/55 dark:bg-violet-950/25',
       )}
       role="region"
       aria-label="Vista previa de la sugerencia del asistente"
     >
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-violet-200/70 px-3 py-2 dark:border-violet-800/60">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-violet-200/60 px-3 py-2.5 dark:border-violet-800/50">
         <p className="flex items-center gap-1.5 text-xs font-semibold text-violet-900 dark:text-violet-100">
           <Bot className="h-3.5 w-3.5 shrink-0 text-violet-600 dark:text-violet-300" aria-hidden />
           Sugerencia del asistente
@@ -90,15 +90,10 @@ export function CopilotSuggestionCard({
           </Button>
         </div>
       </div>
-      <div
-        className={cn(
-          'max-h-[min(50vh,26rem)] overflow-y-auto px-3 py-3',
-          'border-t border-violet-100/80 bg-white/40 dark:border-violet-900/40 dark:bg-black/20',
-        )}
-      >
+      <div className="max-h-[min(50vh,26rem)] overflow-y-auto px-3 py-3">
         <div className={previewClass} dangerouslySetInnerHTML={{ __html: html }} />
       </div>
-      <p className="border-t border-violet-200/50 px-3 py-1.5 text-[10px] text-violet-800/70 dark:border-violet-800/40 dark:text-violet-200/60">
+      <p className="border-t border-violet-200/45 px-3 py-2 text-[10px] text-violet-800/70 dark:border-violet-800/40 dark:text-violet-200/65">
         Vista previa Markdown. Al aceptar se inserta en el editor respetando títulos y listas cuando TipTap lo permite.
       </p>
     </div>

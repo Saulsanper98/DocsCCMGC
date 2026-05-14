@@ -57,9 +57,17 @@ function looksLikeBulletLine(t: string): boolean {
   );
 }
 
+/** Primera palabra tras "N " en ítems de autoevaluación típicos (no son título de sección). */
+const EXERCISE_LEAD_VERB =
+  /^(?:Dibuja|Calcula|Define|Describe|Explica|Lista|Indica|Completa|Señala|Nombra|Elabora|Enumera|Justifica|Analiza|Compara)\b/i;
+
 function looksLikeHeadingLine(t: string, fontSize: number, avgSize: number): boolean {
   const s = t.trim();
   if (s.length < 3 || s.length > 140) return false;
+
+  const numLead = s.match(/^\d{1,2}\s+([\p{L}]+)/u);
+  if (numLead && EXERCISE_LEAD_VERB.test(numLead[1])) return false;
+
   if (fontSize > avgSize * 1.22) return true;
   if (/^(Módulo\s+\d+|Capítulo\s+\d+|Anexo\s+[A-Z0-9]|SOP\s*\d|SOP\s+[—–-]|Índice|Glosario|Introducción|Conclusión|Referencias)\b/i.test(s)) {
     return true;

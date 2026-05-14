@@ -147,7 +147,7 @@ export function DashboardPage() {
   }, [stats.thisMonth]);
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-8">
+    <div className="app-page-x w-full max-w-none space-y-8 py-6">
 
       {/* Hero greeting */}
       <div

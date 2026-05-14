@@ -117,9 +117,14 @@ export function PageBreadcrumb({ className }: { className?: string }) {
   if (pathname === '/' || pathname === '/login') return null;
   if (items.length === 0) return null;
 
+  const breadcrumbTitle = items.map((i) => i.label).join(' › ');
+
   return (
     <nav aria-label="Migas de pan" className={cn('app-page-x pt-3 pb-1 text-sm', className)}>
-      <ol className="flex flex-wrap items-center gap-1 text-[var(--muted-foreground)]">
+      <ol
+        className="flex flex-wrap items-center gap-1 text-[var(--muted-foreground)]"
+        title={breadcrumbTitle}
+      >
         <li className="flex min-w-0 items-center gap-1">
           <Link
             to="/"

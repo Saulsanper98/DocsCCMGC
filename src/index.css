@@ -147,16 +147,111 @@ a:focus-visible,
   outline-offset: 2px;
 }
 
-/* Fondo suave en login (sin competir con el formulario) */
+/* Login — fondo oscuro + halos alineados con --accent / marca (mismo lenguaje que el resto de la app) */
+.login-hero {
+  isolation: isolate;
+  overflow: hidden;
+  background-color: #0a0a0a;
+  background-image:
+    radial-gradient(
+      ellipse 100% 72% at 50% -20%,
+      color-mix(in srgb, var(--accent) 16%, transparent),
+      transparent 54%
+    ),
+    radial-gradient(
+      ellipse 70% 46% at 100% 0%,
+      color-mix(in srgb, var(--brand-500) 12%, transparent),
+      transparent 48%
+    ),
+    radial-gradient(
+      ellipse 58% 40% at 0% 100%,
+      color-mix(in srgb, var(--accent) 10%, transparent),
+      transparent 46%
+    ),
+    linear-gradient(180deg, #121212 0%, #0a0a0a 45%, #050505 100%);
+}
+
 .login-hero::before {
   content: '';
   position: absolute;
-  inset: 0;
-  background: radial-gradient(ellipse 90% 70% at 50% -30%, rgba(59, 130, 246, 0.12), transparent 55%);
+  inset: -40%;
+  background:
+    radial-gradient(circle at 22% 32%, color-mix(in srgb, var(--accent) 14%, transparent) 0%, transparent 42%),
+    radial-gradient(circle at 82% 68%, color-mix(in srgb, var(--brand-500) 14%, transparent) 0%, transparent 40%),
+    radial-gradient(circle at 50% 100%, color-mix(in srgb, var(--accent) 8%, transparent) 0%, transparent 36%);
   pointer-events: none;
+  opacity: 0.95;
 }
-.dark .login-hero::before {
-  background: radial-gradient(ellipse 90% 70% at 50% -30%, rgba(59, 130, 246, 0.2), transparent 55%);
+
+.login-hero::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(ellipse 75% 65% at 50% 45%, black 0%, transparent 72%);
+  pointer-events: none;
+  opacity: 0.2;
+}
+
+/* Etiquetas flotantes: mismo acento que el resto de la UI */
+.login-brand-fields .peer:focus ~ label,
+.login-brand-fields .peer:focus-visible ~ label {
+  color: var(--accent) !important;
+}
+
+/**
+ * Logo del login en color de acento: el PNG actúa como máscara por luminancia
+ * (texto/amarillo → opaco; negro → transparente) y el relleno es var(--accent).
+ */
+.login-brand-logo-wrap > .login-brand-logo-measure {
+  opacity: 0;
+}
+
+.login-brand-logo-accent {
+  background-color: var(--accent);
+  -webkit-mask-image: url('/ccmgc-brand-login.png');
+  -webkit-mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  -webkit-mask-source-type: luminance;
+  mask-image: url('/ccmgc-brand-login.png');
+  mask-size: contain;
+  mask-repeat: no-repeat;
+  mask-position: center;
+  mask-mode: luminance;
+  filter: drop-shadow(0 0 22px color-mix(in srgb, var(--accent) 32%, transparent));
+}
+
+/* Navegadores sin máscara por luminancia: logo original recoloreado aprox. al azul */
+@supports not (mask-mode: luminance) {
+  .login-brand-logo-accent {
+    display: none !important;
+  }
+
+  .login-brand-logo-wrap > .login-brand-logo-measure {
+    opacity: 1 !important;
+    filter: brightness(1.08) saturate(1.35) hue-rotate(172deg);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .login-hero::before {
+    animation: login-hero-glow 18s ease-in-out infinite alternate;
+  }
+}
+
+@keyframes login-hero-glow {
+  0% {
+    transform: translate3d(-1.5%, -1%, 0) scale(1);
+    opacity: 0.82;
+  }
+  100% {
+    transform: translate3d(1.5%, 1.5%, 0) scale(1.04);
+    opacity: 1;
+  }
 }
 
 body {
@@ -209,6 +304,91 @@ body {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--muted-foreground); }
+
+/* Tippy: menú slash del editor (sin caja gris por defecto) */
+.tippy-box[data-theme~='slash-ccmgc'] {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  max-width: none;
+}
+.tippy-box[data-theme~='slash-ccmgc'] > .tippy-content {
+  padding: 0 !important;
+}
+
+/* Scroll solo del panel slash (más fino que el global) */
+.slash-commands-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--muted-foreground) 28%, transparent) transparent;
+}
+.slash-commands-scroll::-webkit-scrollbar {
+  width: 5px;
+}
+.slash-commands-scroll::-webkit-scrollbar-track {
+  background: transparent;
+  margin: 4px 0;
+}
+.slash-commands-scroll::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--muted-foreground) 32%, transparent);
+  border-radius: 6px;
+}
+.slash-commands-scroll::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--muted-foreground) 52%, transparent);
+}
+
+/* Vista documento: scrollbar oculta hasta que el usuario hace scroll */
+.doc-view-scrollbar-autohide {
+  scrollbar-width: none;
+  scrollbar-color: transparent transparent;
+  -ms-overflow-style: none;
+}
+.doc-view-scrollbar-autohide::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+.doc-view-scrollbar-autohide::-webkit-scrollbar-thumb {
+  background: transparent;
+}
+
+.doc-view-scrollbar-autohide.doc-view-scrollbar-autohide--active {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--muted-foreground) 30%, transparent) transparent;
+}
+.doc-view-scrollbar-autohide.doc-view-scrollbar-autohide--active::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.doc-view-scrollbar-autohide.doc-view-scrollbar-autohide--active::-webkit-scrollbar-track {
+  background: transparent;
+  margin: 4px 0;
+}
+.doc-view-scrollbar-autohide.doc-view-scrollbar-autohide--active::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--muted-foreground) 36%, transparent);
+  border-radius: 6px;
+}
+.doc-view-scrollbar-autohide.doc-view-scrollbar-autohide--active::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--muted-foreground) 52%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .doc-view-scrollbar-autohide,
+  .doc-view-scrollbar-autohide.doc-view-scrollbar-autohide--active {
+    scrollbar-width: thin !important;
+    scrollbar-color: color-mix(in srgb, var(--muted-foreground) 28%, transparent) transparent !important;
+    -ms-overflow-style: auto !important;
+  }
+  .doc-view-scrollbar-autohide::-webkit-scrollbar,
+  .doc-view-scrollbar-autohide.doc-view-scrollbar-autohide--active::-webkit-scrollbar {
+    width: 5px !important;
+    height: 5px !important;
+  }
+  .doc-view-scrollbar-autohide::-webkit-scrollbar-thumb,
+  .doc-view-scrollbar-autohide.doc-view-scrollbar-autohide--active::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--muted-foreground) 32%, transparent) !important;
+    border-radius: 6px;
+  }
+}
 
 /* TipTap editor */
 .ProseMirror { outline: none; min-height: 300px; padding: 1rem; }
@@ -451,6 +631,16 @@ body {
   margin: 0;
 }
 
+/* Enlaces dentro de líneas de índice importado: en línea con el texto */
+.doc-view-article p.import-toc-line a,
+.doc-view-article ol li.import-toc-line a,
+.doc-view-article ul li.import-toc-line a {
+  display: inline;
+  margin-left: 0.35em;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
 /* Diagramas / plantillas ASCII tras importación PDF (rack, esquemas) */
 .doc-view-article pre.import-ascii-block,
 pre.import-ascii-block {
@@ -603,6 +793,156 @@ pre.import-ascii-block {
   margin-top: 0.75rem;
 }
 
+/*
+ * Anclas de fragmento (#) en títulos: fuera del flujo, en el margen izquierdo del título
+ * (junto al inicio del texto), para no ocupar una línea ni quedar lejos a la derecha en columnas anchas.
+ */
+.doc-view-article h1.group,
+.doc-view-article h2.group,
+.doc-view-article h3.group,
+.doc-view-article h4.group {
+  position: relative;
+  padding-left: 1.85rem;
+}
+
+.doc-view-article .heading-anchor {
+  position: absolute;
+  left: 0;
+  top: 0.1em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.35rem;
+  height: 1.35rem;
+  border-radius: 0.35rem;
+  color: var(--accent);
+  text-decoration: none;
+  opacity: 0.32;
+  transition:
+    opacity 0.15s ease,
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.doc-view-article .heading-anchor svg {
+  display: block;
+  flex-shrink: 0;
+  width: 13px;
+  height: 13px;
+}
+
+@media (hover: hover) {
+  .doc-view-article h1.group:hover .heading-anchor,
+  .doc-view-article h2.group:hover .heading-anchor,
+  .doc-view-article h3.group:hover .heading-anchor,
+  .doc-view-article h4.group:hover .heading-anchor {
+    opacity: 0.88;
+  }
+}
+
+.doc-view-article .heading-anchor:hover {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
+.doc-view-article .heading-anchor:focus-visible {
+  opacity: 1;
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+@media (max-width: 767px) {
+  .doc-view-article .heading-anchor {
+    opacity: 0.55;
+  }
+}
+
+/* Vista lectura de documento (p. ej. PDF importado): medida, ritmo y contraste suave */
+.doc-view-reading {
+  max-width: min(42rem, 100%);
+  margin-inline: auto;
+  overflow-x: auto;
+  text-rendering: optimizeLegibility;
+  font-size: 1.0625rem;
+  line-height: 1.78;
+  letter-spacing: 0.01em;
+  font-feature-settings: 'kern' 1, 'liga' 1;
+  text-wrap: pretty;
+  padding-top: 0.25rem;
+  padding-bottom: 0.5rem;
+}
+
+.doc-view-reading p {
+  margin: 0.95rem 0;
+  line-height: 1.82;
+  color: color-mix(in srgb, var(--foreground) 96%, var(--muted-foreground));
+}
+
+.dark .doc-view-reading p {
+  color: color-mix(in srgb, var(--foreground) 97%, var(--muted-foreground));
+}
+
+.doc-view-reading h1 {
+  font-size: clamp(1.55rem, 1.2rem + 1.5vw, 2rem);
+  line-height: 1.22;
+  margin-top: 0;
+  margin-bottom: 0.85rem;
+}
+
+.doc-view-reading h2 {
+  font-size: clamp(1.28rem, 1.1rem + 0.9vw, 1.55rem);
+  line-height: 1.28;
+  margin-top: 2.25rem;
+  margin-bottom: 0.65rem;
+  padding-bottom: 0.2rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+}
+
+.doc-view-reading h3 {
+  font-size: clamp(1.12rem, 1rem + 0.45vw, 1.28rem);
+  line-height: 1.32;
+  margin-top: 1.85rem;
+}
+
+.doc-view-reading h4 {
+  font-size: 1.08rem;
+  margin-top: 1.5rem;
+}
+
+.doc-view-reading ul,
+.doc-view-reading ol {
+  margin: 1.1rem 0;
+  padding-left: 1.35rem;
+}
+
+.doc-view-reading li {
+  margin: 0.45rem 0;
+  line-height: 1.75;
+}
+
+.doc-view-reading p.import-toc-line {
+  margin: 0.35rem 0;
+  padding: 0.55rem 0.85rem 0.55rem 1rem;
+  line-height: 1.68;
+  font-size: 0.98em;
+  border-radius: 0.5rem;
+  border: 1px solid color-mix(in srgb, var(--border) 78%, transparent);
+  border-left: 3px solid var(--accent);
+  background: color-mix(in srgb, var(--muted) 48%, transparent);
+}
+
+.dark .doc-view-reading p.import-toc-line {
+  background: color-mix(in srgb, var(--muted) 32%, transparent);
+}
+
+.doc-view-reading li.import-toc-line p {
+  margin: 0.35rem 0;
+}
+
+.doc-view-reading blockquote {
+  border-left-width: 3px;
+  background: color-mix(in srgb, var(--muted) 45%, transparent);
+}
+
 /* Mention style */
 .mention {
   color: var(--accent);
@@ -671,7 +1011,85 @@ pre.import-ascii-block {
     box-shadow: none !important;
   }
 
+  .doc-view-article .heading-anchor {
+    display: none !important;
+  }
+
   a[href]::after {
     content: none;
   }
+}
+
+/* ── Mejoras visuales / comodidad prolongada (DocBrain) ── */
+:root {
+  --text-chrome-size: 0.8125rem;
+  --text-list-size: 0.875rem;
+  --text-reading-size: 1rem;
+  --line-reading: 1.72;
+  --focus-ring-width: 2px;
+  --focus-ring-offset: 2px;
+}
+
+/* Superficies: card = contenido; popover = flotante temporal; muted = listas secundarias */
+
+html.docbrain-comfort-high-contrast {
+  --muted-foreground: #475569;
+  --border: #cbd5e1;
+}
+
+html.dark.docbrain-comfort-high-contrast {
+  --muted-foreground: #cbd5e1;
+  --border: #475569;
+  --divider-faint: color-mix(in srgb, var(--foreground) 14%, transparent);
+}
+
+html.docbrain-comfort-low-luminance .app-main-surface {
+  filter: saturate(0.88) contrast(1.02);
+}
+
+html.docbrain-comfort-low-luminance .login-hero {
+  filter: saturate(0.9);
+}
+
+/* Contenido principal: ancho completo del área main (sin caja centrada que deja bandas vacías). */
+.app-main-inner {
+  width: 100%;
+  max-width: none;
+  margin-inline: 0;
+}
+
+.app-page-title {
+  font-size: clamp(1.125rem, 1.05rem + 0.35vw, 1.375rem);
+  font-weight: 600;
+  letter-spacing: var(--letter-spacing-tight, -0.02em);
+  color: var(--foreground);
+  line-height: var(--line-height-tight, 1.3);
+}
+
+.doc-view-article.ProseMirror,
+.doc-view-article {
+  line-height: var(--line-reading);
+}
+
+/* Medida de lectura opcional: ancho generoso; el layout de página ya no se centra en 90rem. */
+.app-reading-measure {
+  max-width: min(100%, 78rem);
+  margin-inline: auto;
+}
+
+.app-table-numeric {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+
+@media (max-width: 767px) {
+  .touch-comfort-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+[data-docbrain-preview='true'] .ProseMirror {
+  outline: 2px dashed color-mix(in srgb, var(--accent) 45%, transparent);
+  outline-offset: 4px;
 }

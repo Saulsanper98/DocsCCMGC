@@ -8,10 +8,29 @@ export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   error?: string;
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
+  /** Contenedor relativo (iconos, sombra del campo). */
+  wrapperClassName?: string;
+  /** Solo con `floatingLabel`: clases extra para la etiqueta flotante (p. ej. posición `top-*`). */
+  floatingLabelClassName?: string;
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ className, label, floatingLabel, error, leftIcon, rightIcon, id, placeholder, ...props }, ref) => {
+  (
+    {
+      className,
+      label,
+      floatingLabel,
+      error,
+      leftIcon,
+      rightIcon,
+      wrapperClassName,
+      floatingLabelClassName,
+      id,
+      placeholder,
+      ...props
+    },
+    ref,
+  ) => {
     const genId = useId();
     const inputId = id || (label ? label.toLowerCase().replace(/\s+/g, '-') : undefined);
     const errorId = error ? `${genId}-error` : undefined;
@@ -19,7 +38,12 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
     if (label && floatingLabel) {
       return (
         <div className="flex flex-col gap-1.5">
-          <div className="relative rounded-lg shadow-sm transition-shadow focus-within:shadow-md">
+          <div
+            className={cn(
+              'relative rounded-lg shadow-sm transition-shadow focus-within:shadow-md',
+              wrapperClassName,
+            )}
+          >
             {leftIcon && (
               <span className="pointer-events-none absolute left-3 top-1/2 z-[1] -translate-y-1/2 text-[var(--muted-foreground)]">
                 {leftIcon}
@@ -48,6 +72,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
                 leftIcon ? 'left-10' : 'left-3',
                 'peer-focus:top-2 peer-focus:translate-y-0 peer-focus:text-xs peer-focus:text-[var(--accent)]',
                 'peer-[:not(:placeholder-shown)]:top-2 peer-[:not(:placeholder-shown)]:translate-y-0 peer-[:not(:placeholder-shown)]:text-xs',
+                floatingLabelClassName,
               )}
             >
               {label}
@@ -72,7 +97,12 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             {label}
           </label>
         )}
-        <div className="relative rounded-lg shadow-sm transition-shadow focus-within:shadow-md">
+        <div
+          className={cn(
+            'relative rounded-lg shadow-sm transition-shadow focus-within:shadow-md',
+            wrapperClassName,
+          )}
+        >
           {leftIcon && (
             <span className="pointer-events-none absolute left-3 top-1/2 z-[1] -translate-y-1/2 text-[var(--muted-foreground)]">
               {leftIcon}

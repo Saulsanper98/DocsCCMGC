@@ -7,6 +7,12 @@ export type DocumentsViewMode = 'list' | 'grid' | 'table';
 export type EditorReadingWidth = 'narrow' | 'medium' | 'wide';
 export type UiDensity = 'comfortable' | 'compact';
 
+/** Comodidad visual global (contraste / luminancia). */
+export type VisualComfort = 'default' | 'high-contrast' | 'low-luminance';
+
+/** Densidad de filas en la tabla de documentos; `inherit` usa `uiDensity`. */
+export type DocumentsTableDensity = 'inherit' | 'comfortable' | 'compact';
+
 /** Rail lateral: fijo expandido, fijo colapsado, o ancho mínimo y expansión al pasar el cursor (solo escritorio). */
 export type SidebarMode = 'expanded' | 'collapsed' | 'hover';
 
@@ -36,6 +42,18 @@ interface AppState {
   sidebarNavOrderAdmin: string[];
   /** Listados y tablas: filas más compactas o más aire */
   uiDensity: UiDensity;
+  /** Tabla virtualizada: filas independientes del listado cuando no es `inherit`. */
+  documentsTableDensity: DocumentsTableDensity;
+  /** Contraste extra o menor brillo cromático (clases en `document.documentElement`). */
+  visualComfort: VisualComfort;
+  /** Pie de página más bajo en rutas de trabajo. */
+  footerCompact: boolean;
+  /** Recordatorio de pausa (minutos); 0 = desactivado. */
+  breakReminderMinutes: 0 | 55 | 90;
+  /** Sonidos de UI (futuro); desactivado por defecto. */
+  soundsEnabled: boolean;
+  /** Modal global de nota rápida (no persistir). */
+  quickNoteModalOpen: boolean;
 
   setUser: (user: UserProfile | null) => void;
   setTheme: (theme: 'light' | 'dark' | 'system') => void;
@@ -56,6 +74,12 @@ interface AppState {
   setSidebarNavOrderMain: (ids: string[]) => void;
   setSidebarNavOrderAdmin: (ids: string[]) => void;
   setUiDensity: (d: UiDensity) => void;
+  setDocumentsTableDensity: (d: DocumentsTableDensity) => void;
+  setVisualComfort: (v: VisualComfort) => void;
+  setFooterCompact: (v: boolean) => void;
+  setBreakReminderMinutes: (m: 0 | 55 | 90) => void;
+  setSoundsEnabled: (v: boolean) => void;
+  setQuickNoteModalOpen: (open: boolean) => void;
 }
 
 export const useAppStore = create<AppState>()(
@@ -79,6 +103,12 @@ export const useAppStore = create<AppState>()(
       sidebarNavOrderMain: [...SIDEBAR_MAIN_DEFAULT_ORDER],
       sidebarNavOrderAdmin: [...SIDEBAR_ADMIN_DEFAULT_ORDER],
       uiDensity: 'comfortable',
+      documentsTableDensity: 'inherit',
+      visualComfort: 'default',
+      footerCompact: true,
+      breakReminderMinutes: 0,
+      soundsEnabled: false,
+      quickNoteModalOpen: false,
 
       setUser: (user) => set({ user }),
       setTheme: (theme) => set({ theme }),
@@ -110,6 +140,12 @@ export const useAppStore = create<AppState>()(
       setSidebarNavOrderMain: (sidebarNavOrderMain) => set({ sidebarNavOrderMain }),
       setSidebarNavOrderAdmin: (sidebarNavOrderAdmin) => set({ sidebarNavOrderAdmin }),
       setUiDensity: (uiDensity) => set({ uiDensity }),
+      setDocumentsTableDensity: (documentsTableDensity) => set({ documentsTableDensity }),
+      setVisualComfort: (visualComfort) => set({ visualComfort }),
+      setFooterCompact: (footerCompact) => set({ footerCompact }),
+      setBreakReminderMinutes: (breakReminderMinutes) => set({ breakReminderMinutes }),
+      setSoundsEnabled: (soundsEnabled) => set({ soundsEnabled }),
+      setQuickNoteModalOpen: (quickNoteModalOpen) => set({ quickNoteModalOpen }),
     }),
     {
       name: 'docbrain-app',
@@ -121,6 +157,11 @@ export const useAppStore = create<AppState>()(
         sidebarNavOrderMain: state.sidebarNavOrderMain,
         sidebarNavOrderAdmin: state.sidebarNavOrderAdmin,
         uiDensity: state.uiDensity,
+        documentsTableDensity: state.documentsTableDensity,
+        visualComfort: state.visualComfort,
+        footerCompact: state.footerCompact,
+        breakReminderMinutes: state.breakReminderMinutes,
+        soundsEnabled: state.soundsEnabled,
         /* editorZenMode deliberadamente omitido para no persistirlo. */
       }),
       merge: (persistedState, currentState) => {
@@ -140,11 +181,40 @@ export const useAppStore = create<AppState>()(
           sidebarMode = 'hover';
         }
 
+        let visualComfort: VisualComfort = 'default';
+        if (
+          raw?.visualComfort === 'default' ||
+          raw?.visualComfort === 'high-contrast' ||
+          raw?.visualComfort === 'low-luminance'
+        ) {
+          visualComfort = raw.visualComfort as VisualComfort;
+        }
+
+        let documentsTableDensity: DocumentsTableDensity = 'inherit';
+        if (
+          raw?.documentsTableDensity === 'inherit' ||
+          raw?.documentsTableDensity === 'comfortable' ||
+          raw?.documentsTableDensity === 'compact'
+        ) {
+          documentsTableDensity = raw.documentsTableDensity as DocumentsTableDensity;
+        }
+
+        let breakReminderMinutes: 0 | 55 | 90 = 0;
+        if (raw?.breakReminderMinutes === 55 || raw?.breakReminderMinutes === 90) {
+          breakReminderMinutes = raw.breakReminderMinutes as 55 | 90;
+        }
+
         return {
           ...base,
           sidebarMode,
           sidebarHoverExpanded: false,
           editorZenMode: false,
+          quickNoteModalOpen: false,
+          visualComfort,
+          documentsTableDensity,
+          breakReminderMinutes,
+          footerCompact: raw?.footerCompact !== undefined ? Boolean(raw?.footerCompact) : true,
+          soundsEnabled: Boolean(raw?.soundsEnabled),
           sidebarNavOrderMain:
             Array.isArray(base.sidebarNavOrderMain) && base.sidebarNavOrderMain.length > 0
               ? base.sidebarNavOrderMain

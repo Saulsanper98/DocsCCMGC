@@ -33,7 +33,7 @@ export function QuickNoteModal({ open, onOpenChange }: QuickNoteModalProps) {
         <Dialog.Overlay className="fixed inset-0 z-app-modal bg-[var(--overlay-scrim)] backdrop-blur-sm motion-safe:transition-opacity motion-safe:duration-200 motion-reduce:backdrop-blur-none" />
         <Dialog.Content
           className={cn(
-            'fixed left-1/2 top-1/2 z-[61] w-[min(100%-1.5rem,28rem)] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-[var(--border)] bg-[var(--card)] p-5 shadow-2xl',
+            'fixed left-1/2 top-1/2 z-[201] w-[min(100%-1.5rem,28rem)] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-[var(--border)] bg-[var(--card)] p-5 shadow-2xl',
             'focus:outline-none',
           )}
           aria-describedby={undefined}

@@ -117,6 +117,16 @@ export function DocumentEditorPage() {
   const outlineItems = useEditorOutlineItems(editor);
 
   useEffect(() => {
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (!isDirty) return;
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [isDirty]);
+
+  useEffect(() => {
     if (!copilotLoading) {
       setCopilotLoadSeconds(0);
       return;
@@ -415,7 +425,7 @@ export function DocumentEditorPage() {
 
   if (loading) {
     return (
-      <div className="p-6 max-w-4xl mx-auto space-y-4">
+      <div className="p-6 app-page-x w-full max-w-none space-y-4">
         <Skeleton className="h-10 w-2/3" />
         <Skeleton className="h-4 w-full" />
         <Skeleton className="h-4 w-5/6" />
@@ -430,7 +440,7 @@ export function DocumentEditorPage() {
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Toolbar */}
         {editorZenMode ? (
-          <div className="sticky top-0 z-30 flex shrink-0 items-center justify-between gap-2 border-b border-[var(--border)] bg-[var(--card)]/95 px-4 py-2 backdrop-blur-md">
+          <div className="sticky top-0 z-30 flex shrink-0 items-center justify-between gap-2 border-b border-[var(--border)]/50 bg-[var(--background)]/90 px-4 py-2 backdrop-blur-md supports-[backdrop-filter]:bg-[var(--background)]/75">
             <div className="flex min-w-0 flex-wrap items-center gap-2">
               <Button variant="ghost" size="icon" onClick={() => navigate(-1)} aria-label="Volver">
                 <ChevronLeft className="h-4 w-4" />
@@ -485,7 +495,7 @@ export function DocumentEditorPage() {
             </div>
           </div>
         ) : (
-        <div className="sticky top-0 z-30 flex items-center gap-1 px-4 py-2 border-b border-[var(--border)] bg-[var(--card)]/95 backdrop-blur-md supports-[backdrop-filter]:bg-[var(--card)]/90 flex-wrap shrink-0">
+        <div className="sticky top-0 z-30 flex items-center gap-1 px-4 py-2 border-b border-[var(--border)]/50 bg-[var(--background)]/90 backdrop-blur-md supports-[backdrop-filter]:bg-[var(--background)]/75 flex-wrap shrink-0">
           <Button variant="ghost" size="icon" onClick={() => navigate(-1)} aria-label="Volver">
             <ChevronLeft className="w-4 h-4" />
           </Button>
@@ -683,16 +693,16 @@ export function DocumentEditorPage() {
               onOutlineSheetClose={() => setOutlineSheetOpen(false)}
             />
           )}
-          <div ref={editorBodyScrollRef} className="flex-1 overflow-y-auto min-w-0">
+          <div ref={editorBodyScrollRef} className="flex-1 overflow-y-auto min-w-0 bg-[var(--background)]">
           <div
             className={cn(
-              'mx-auto px-8 py-6',
+              'w-full max-w-none px-4 py-6 sm:px-6 lg:px-8',
               editorZenMode && zenWideLayout
-                ? 'max-w-6xl py-10'
+                ? 'py-10'
                 : cn(
-                    editorReadingWidth === 'narrow' && 'max-w-2xl',
-                    editorReadingWidth === 'medium' && 'max-w-3xl',
-                    editorReadingWidth === 'wide' && 'max-w-5xl',
+                    editorReadingWidth === 'narrow' && 'max-w-4xl mx-auto',
+                    editorReadingWidth === 'medium' && 'max-w-6xl mx-auto',
+                    editorReadingWidth === 'wide' && 'max-w-none',
                   ),
             )}
           >
@@ -824,20 +834,22 @@ export function DocumentEditorPage() {
             )}
 
             {/* Editor */}
-            <EditorContent
-              editor={editor}
-              className={cn(
-                'min-h-[60vh] doc-view-article prose-editor-toc',
-                previewMode && 'ring-1 ring-[var(--accent)]/20 rounded-xl bg-[var(--muted)]/20 px-2 py-3 -mx-2'
-              )}
-            />
+            <div data-docbrain-preview={previewMode ? 'true' : undefined}>
+              <EditorContent
+                editor={editor}
+                className={cn(
+                  'min-h-[60vh] doc-view-article prose-editor-toc',
+                  previewMode && 'ring-1 ring-[var(--accent)]/20 rounded-xl bg-[var(--muted)]/20 px-2 py-3 -mx-2'
+                )}
+              />
+            </div>
           </div>
           </div>
         </div>
 
         {/* Bottom bar */}
         {!editorZenMode && (
-        <div className="flex items-center justify-between px-4 py-1.5 border-t border-[var(--border)] text-xs text-[var(--muted-foreground)]">
+        <div className="flex items-center justify-between px-4 py-1.5 border-t border-[var(--border)]/40 bg-[var(--background)]/80 text-xs text-[var(--muted-foreground)] backdrop-blur-[2px]">
           <span>{wordCount} palabras</span>
           <span className={cn(STATUS_COLORS[status])}>{STATUS_LABELS[status]}</span>
         </div>

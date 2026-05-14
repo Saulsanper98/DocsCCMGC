@@ -156,7 +156,7 @@ export function AttachmentPreviewModal({ attachment, onClose }: AttachmentPrevie
               No hay URL de descarga disponible.
             </p>
           ) : isPdf ? (
-            <div className="mx-auto max-w-[900px] px-4 py-6">
+            <div className="mx-auto w-full max-w-none px-4 py-6">
               {pdfError ? (
                 <p className="text-center text-sm text-[var(--destructive)]">{pdfError}</p>
               ) : (
@@ -195,7 +195,7 @@ export function AttachmentPreviewModal({ attachment, onClose }: AttachmentPrevie
               )}
             </div>
           ) : isDocx ? (
-            <div className="mx-auto max-w-3xl px-6 py-8">
+            <div className="mx-auto w-full max-w-none px-4 py-8 sm:px-6">
               {docxLoading && (
                 <div className="flex justify-center py-16">
                   <Loader2 className="h-8 w-8 animate-spin text-[var(--accent)]" />
@@ -220,7 +220,7 @@ export function AttachmentPreviewModal({ attachment, onClose }: AttachmentPrevie
               />
             </div>
           ) : isText && textContent !== null ? (
-            <pre className="mx-auto max-w-4xl whitespace-pre-wrap break-words p-8 font-mono text-sm leading-relaxed text-[var(--foreground)]">
+            <pre className="mx-auto w-full max-w-none whitespace-pre-wrap break-words p-6 font-mono text-sm leading-relaxed text-[var(--foreground)] sm:p-8">
               {textContent}
             </pre>
           ) : (

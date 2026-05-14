@@ -1,11 +1,34 @@
 import type { Editor, Range } from '@tiptap/core';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import type { LucideIcon } from 'lucide-react';
+import {
+  AlertTriangle,
+  Calendar,
+  CircleCheck,
+  ClipboardList,
+  Code2,
+  Heading1,
+  Heading2,
+  Heading3,
+  Heading4,
+  Info,
+  List,
+  ListChecks,
+  ListOrdered,
+  Minus,
+  OctagonAlert,
+  Pilcrow,
+  Table2,
+  TextQuote,
+} from 'lucide-react';
 
 export type SlashItem = {
   id: string;
   title: string;
   subtitle?: string;
+  /** Icono visual en el menú slash */
+  icon: LucideIcon;
   keywords?: string[];
   command: (opts: { editor: Editor; range: Range }) => void;
 };
@@ -29,6 +52,7 @@ export function getSlashItems(): SlashItem[] {
       id: 'h1',
       title: 'Encabezado 1',
       subtitle: '/h1',
+      icon: Heading1,
       keywords: ['titulo', 'heading'],
       command: ({ editor, range }) =>
         editor.chain().focus().deleteRange(range).setHeading({ level: 1 }).run(),
@@ -37,6 +61,7 @@ export function getSlashItems(): SlashItem[] {
       id: 'h2',
       title: 'Encabezado 2',
       subtitle: '/h2',
+      icon: Heading2,
       command: ({ editor, range }) =>
         editor.chain().focus().deleteRange(range).setHeading({ level: 2 }).run(),
     },
@@ -44,6 +69,7 @@ export function getSlashItems(): SlashItem[] {
       id: 'h3',
       title: 'Encabezado 3',
       subtitle: '/h3',
+      icon: Heading3,
       command: ({ editor, range }) =>
         editor.chain().focus().deleteRange(range).setHeading({ level: 3 }).run(),
     },
@@ -51,6 +77,7 @@ export function getSlashItems(): SlashItem[] {
       id: 'h4',
       title: 'Encabezado 4',
       subtitle: '/h4',
+      icon: Heading4,
       keywords: ['subtitulo', 'seccion'],
       command: ({ editor, range }) =>
         editor.chain().focus().deleteRange(range).setHeading({ level: 4 }).run(),
@@ -59,6 +86,7 @@ export function getSlashItems(): SlashItem[] {
       id: 'p',
       title: 'Párrafo',
       subtitle: '/p',
+      icon: Pilcrow,
       keywords: ['texto'],
       command: ({ editor, range }) =>
         editor.chain().focus().deleteRange(range).setParagraph().run(),
@@ -67,6 +95,7 @@ export function getSlashItems(): SlashItem[] {
       id: 'ul',
       title: 'Lista con viñetas',
       subtitle: '/ul',
+      icon: List,
       command: ({ editor, range }) =>
         editor.chain().focus().deleteRange(range).toggleBulletList().run(),
     },
@@ -74,6 +103,7 @@ export function getSlashItems(): SlashItem[] {
       id: 'ol',
       title: 'Lista numerada',
       subtitle: '/ol',
+      icon: ListOrdered,
       command: ({ editor, range }) =>
         editor.chain().focus().deleteRange(range).toggleOrderedList().run(),
     },
@@ -81,6 +111,7 @@ export function getSlashItems(): SlashItem[] {
       id: 'check',
       title: 'Lista de tareas',
       subtitle: '/check',
+      icon: ListChecks,
       keywords: ['todo', 'checkbox'],
       command: ({ editor, range }) =>
         editor.chain().focus().deleteRange(range).toggleTaskList().run(),
@@ -89,6 +120,7 @@ export function getSlashItems(): SlashItem[] {
       id: 'code',
       title: 'Bloque de código',
       subtitle: '/code',
+      icon: Code2,
       command: ({ editor, range }) =>
         editor.chain().focus().deleteRange(range).toggleCodeBlock().run(),
     },
@@ -96,6 +128,7 @@ export function getSlashItems(): SlashItem[] {
       id: 'quote',
       title: 'Cita',
       subtitle: '/cita',
+      icon: TextQuote,
       command: ({ editor, range }) =>
         editor.chain().focus().deleteRange(range).toggleBlockquote().run(),
     },
@@ -103,6 +136,7 @@ export function getSlashItems(): SlashItem[] {
       id: 'hr',
       title: 'Separador',
       subtitle: '/hr',
+      icon: Minus,
       command: ({ editor, range }) =>
         editor.chain().focus().deleteRange(range).setHorizontalRule().run(),
     },
@@ -110,6 +144,7 @@ export function getSlashItems(): SlashItem[] {
       id: 'callout-info',
       title: 'Nota informativa',
       subtitle: '/nota info',
+      icon: Info,
       keywords: ['aviso', 'info'],
       command: ({ editor, range }) =>
         editor.chain().focus().deleteRange(range).insertCcmgcCallout('info').run(),
@@ -118,6 +153,7 @@ export function getSlashItems(): SlashItem[] {
       id: 'callout-warning',
       title: 'Nota advertencia',
       subtitle: '/nota warning',
+      icon: AlertTriangle,
       keywords: ['atencion'],
       command: ({ editor, range }) =>
         editor.chain().focus().deleteRange(range).insertCcmgcCallout('warning').run(),
@@ -126,6 +162,7 @@ export function getSlashItems(): SlashItem[] {
       id: 'callout-danger',
       title: 'Nota peligro',
       subtitle: '/nota danger',
+      icon: OctagonAlert,
       keywords: ['critico'],
       command: ({ editor, range }) =>
         editor.chain().focus().deleteRange(range).insertCcmgcCallout('danger').run(),
@@ -134,6 +171,7 @@ export function getSlashItems(): SlashItem[] {
       id: 'callout-success',
       title: 'Nota correcto',
       subtitle: '/nota success',
+      icon: CircleCheck,
       command: ({ editor, range }) =>
         editor.chain().focus().deleteRange(range).insertCcmgcCallout('success').run(),
     },
@@ -141,6 +179,7 @@ export function getSlashItems(): SlashItem[] {
       id: 'procedure',
       title: 'Paso de procedimiento',
       subtitle: '/paso',
+      icon: ClipboardList,
       keywords: ['procedimiento', 'checklist'],
       command: ({ editor, range }) =>
         editor.chain().focus().deleteRange(range).insertCcmgcProcedureStep(1, 'Paso').run(),
@@ -149,6 +188,7 @@ export function getSlashItems(): SlashItem[] {
       id: 'signature',
       title: 'Bloque firma / aprobación (tabla)',
       subtitle: '/firma',
+      icon: Table2,
       keywords: ['tabla', 'aprobacion'],
       command: ({ editor, range }) =>
         editor
@@ -162,6 +202,7 @@ export function getSlashItems(): SlashItem[] {
       id: 'fecha',
       title: 'Fecha de hoy',
       subtitle: '/fecha',
+      icon: Calendar,
       command: ({ editor, range }) => {
         const t = format(new Date(), "d 'de' MMMM yyyy", { locale: es });
         editor.chain().focus().deleteRange(range).insertContent(t).run();

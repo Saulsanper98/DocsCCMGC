@@ -12,9 +12,19 @@ function escapeHtml(text: string): string {
 }
 
 /**
- * Heurísticas para texto que en PDF perdió espacios entre runs.
- * Se ejecuta varias veces para encadenar sustituciones.
+ * Texto plano para heurísticas de importación: quita marcas inline (&lt;strong&gt;, etc.),
+ * convierte &lt;br&gt; en espacio para recuperar saltos que el PDF metió dentro del mismo &lt;p&gt;.
  */
+export function plainTextForImportHeuristics(htmlish: string): string {
+  return htmlish
+    .replace(/<br\s*\/?>/gi, ' ')
+    .replace(/<\/(p|div|h[1-6])\s*>/gi, ' ')
+    .replace(/<[^>]+>/g, '')
+    .replace(/[\u00a0]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 /**
  * Artefactos típicicos de extracción PDF: guiones o espacios sustituidos por "n" o pegados sin espacio.
  * Orden: frases largas antes que cortas para evitar solapes.
@@ -209,7 +219,7 @@ export function repairImportArtifactsInHtml(html: string): string {
 
   // Lista ordenada (TipTap): un <li> con "… capacidad 9 SOPs …"
   s = s.replace(/<li[^>]*>\s*<p>([\s\S]*?)<\/p>\s*<\/li>/gi, (full, inner: string) => {
-    const plain = inner.replace(/<[^>]+>/g, '').trim();
+    const plain = plainTextForImportHeuristics(inner);
     if (!plain) return full;
     const cap = trySplitCapacidadSopIndexLine(plain);
     if (!cap) return full;
@@ -222,7 +232,7 @@ export function repairImportArtifactsInHtml(html: string): string {
   });
 
   s = s.replace(/<p>([\s\S]*?)<\/p>/gi, (full, inner: string) => {
-    const plain = inner.replace(/<[^>]+>/g, '').trim();
+    const plain = plainTextForImportHeuristics(inner);
     if (!plain) return full;
     return (
       trySplitDenseIndexParagraph(plain) ??
@@ -255,8 +265,7 @@ function trySplitCapacidadSopIndexLine(trimmed: string): string | null {
  * (el PDF a veces elimina el "1. 2. 3.").
  */
 function trySplitAutoevalImperativeParagraph(trimmed: string): string | null {
-  if (/<[a-z]/i.test(trimmed)) return null;
-  const t = fixGluedPlainText(trimmed.replace(/\s+/g, ' ')).trim();
+  const t = normalizeAutoevaluaciónNumbering(fixGluedPlainText(trimmed.replace(/\s+/g, ' '))).trim();
   if (t.length < 40 || !/\bAutoevaluación\b/i.test(t)) return null;
 
   const IMP =
@@ -283,8 +292,15 @@ function trySplitAutoevalImperativeParagraph(trimmed: string): string | null {
  * Autoevaluación / ejercicios: un solo <p> con "… 1 Verbo … 2 Verbo … 3 Verbo".
  * Separa en título corto + lista ordenada (el PDF suele perder saltos entre ítems).
  */
+/** "Autoevaluación1Dibuja" / "Autoevaluación 1Dibuja" → espacios correctos antes de la lista numerada */
+function normalizeAutoevaluaciónNumbering(t: string): string {
+  return t
+    .replace(/\bAutoevaluación(\d{1,2})\b/gi, 'Autoevaluación $1')
+    .replace(/\bAutoevaluación[ \t]*(\d{1,2})([A-ZÁÉÍÓÚÑÜ])/gi, 'Autoevaluación $1 $2');
+}
+
 function trySplitNumberedExerciseParagraph(trimmed: string): string | null {
-  const t = fixGluedPlainText(trimmed.replace(/\s+/g, ' ')).trim();
+  const t = normalizeAutoevaluaciónNumbering(fixGluedPlainText(trimmed.replace(/\s+/g, ' '))).trim();
   if (t.length < 50) return null;
 
   // Partir delante de " N " cuando N es 1–2 dígitos y va seguido de verbo/oración (mayúscula inicial + minúsculas)
@@ -360,39 +376,32 @@ function processSingleParagraphInner(inner: string): string {
   const trimmed = inner.trim();
   if (!trimmed) return '<p></p>';
 
-  if (!/<[a-z]/i.test(trimmed) && looksLikeAsciiDiagram(trimmed)) {
+  const plainForSplit = plainTextForImportHeuristics(trimmed);
+  const skipExerciseSplits = /<(?:table|ul|ol|pre|blockquote)\b/i.test(trimmed);
+
+  if (!skipExerciseSplits && looksLikeAsciiDiagram(plainForSplit)) {
     // TipTap espera pre>code con language-* para mapear a codeBlock con fuente monoespaciada
-    return `<pre class="import-ascii-block"><code class="language-ascii">${escapeHtml(trimmed)}</code></pre>`;
+    return `<pre class="import-ascii-block"><code class="language-ascii">${escapeHtml(plainForSplit)}</code></pre>`;
   }
 
-  if (!/<[a-z]/i.test(trimmed)) {
-    const denseIdx = trySplitDenseIndexParagraph(trimmed);
-    if (denseIdx) return denseIdx;
-  }
+  const denseIdx = trySplitDenseIndexParagraph(plainForSplit);
+  if (denseIdx) return denseIdx;
 
-  if (!/<[a-z]/i.test(trimmed)) {
-    const capSop = trySplitCapacidadSopIndexLine(trimmed);
-    if (capSop) return capSop;
-  }
+  const capSop = trySplitCapacidadSopIndexLine(plainForSplit);
+  if (capSop) return capSop;
 
-  if (!/<[a-z]/i.test(trimmed)) {
-    const exercises = trySplitNumberedExerciseParagraph(trimmed);
-    if (exercises) return exercises;
-  }
+  const exercises = !skipExerciseSplits && trySplitNumberedExerciseParagraph(plainForSplit);
+  if (exercises) return exercises;
 
-  if (!/<[a-z]/i.test(trimmed)) {
-    const imperative = trySplitAutoevalImperativeParagraph(trimmed);
-    if (imperative) return imperative;
-  }
+  const imperative = !skipExerciseSplits && trySplitAutoevalImperativeParagraph(plainForSplit);
+  if (imperative) return imperative;
 
-  if (!/<[a-z]/i.test(trimmed)) {
-    const gloss = trySplitGlossaryParagraph(trimmed);
-    if (gloss) return gloss;
-  }
+  const gloss = trySplitGlossaryParagraph(plainForSplit);
+  if (gloss) return gloss;
 
-  const modCount = (trimmed.match(/\d+\s*Módulo/gi) || []).length;
+  const modCount = (plainForSplit.match(/\d+\s*Módulo/gi) || []).length;
   if (modCount > 1) {
-    const parts = trimmed.split(/(?=\d+\s*Módulo)/i).filter(Boolean);
+    const parts = plainForSplit.split(/(?=\d+\s*Módulo)/i).filter(Boolean);
     return parts
       .map((p) => {
         const fixed = fixGluedPlainText(p.trim().replace(/^[,;\s]+/, ''));
@@ -401,9 +410,9 @@ function processSingleParagraphInner(inner: string): string {
       .join('');
   }
 
-  const numberedDash = trimmed.match(/\d+\s*[—–-]/g);
+  const numberedDash = plainForSplit.match(/\d+\s*[—–-]/g);
   if (numberedDash && numberedDash.length >= 3) {
-    const parts = trimmed.split(/(?=\d+\s*[—–-]\s)/i).filter(Boolean);
+    const parts = plainForSplit.split(/(?=\d+\s*[—–-]\s)/i).filter(Boolean);
     if (parts.length > 1) {
       return parts
         .map((p) => `<p class="import-toc-line">${fixGluedPlainText(p.trim())}</p>`)
@@ -411,7 +420,7 @@ function processSingleParagraphInner(inner: string): string {
     }
   }
 
-  const fixed = fixGluedPlainText(trimmed);
+  const fixed = fixGluedPlainText(plainForSplit.length > 0 ? plainForSplit : trimmed);
   return `<p>${fixed}</p>`;
 }
 

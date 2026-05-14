@@ -1,7 +1,6 @@
-import { useState, Suspense } from 'react';
-import { Outlet, Navigate } from 'react-router-dom';
+import { useState, Suspense, useEffect, useRef } from 'react';
+import { Outlet, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
-import { StickyNote } from 'lucide-react';
 import { Sidebar } from '@/shared/components/Sidebar';
 import { Header } from '@/shared/components/Header';
 import { CommandPalette } from '@/shared/components/CommandPalette';
@@ -12,12 +11,11 @@ import { NavProgressBar } from '@/shared/components/NavProgressBar';
 import { ScrollToTop } from '@/shared/components/ScrollToTop';
 import { useAuth } from '@/features/auth/useAuth';
 import { Skeleton } from '@/shared/components/ui/Skeleton';
-import { useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import { useAppStore } from './store';
 import { useKeyboardShortcuts } from '@/shared/hooks/useKeyboardShortcuts';
 import { useRealtimeNotifications } from '@/shared/hooks/useRealtime';
-import { RouteFallback } from './RouteFallback';
+import { SmartRouteFallback } from './SmartRouteFallback';
 import { PageBreadcrumb } from '@/shared/components/PageBreadcrumb';
 import { AppFooter } from '@/shared/components/AppFooter';
 import { AppOnboarding } from '@/shared/components/AppOnboarding';
@@ -71,12 +69,44 @@ function LayoutInner({
   showShortcuts: boolean;
   setShowShortcuts: (v: boolean) => void;
 }) {
-  const { setCommandPaletteOpen, mobileDrawerOpen, setMobileDrawerOpen } = useAppStore();
+  const {
+    setCommandPaletteOpen,
+    mobileDrawerOpen,
+    setMobileDrawerOpen,
+    visualComfort,
+    breakReminderMinutes,
+    quickNoteModalOpen,
+    setQuickNoteModalOpen,
+  } = useAppStore();
   const navigate = useNavigate();
-  const [quickNoteOpen, setQuickNoteOpen] = useState(false);
+  const location = useLocation();
   const mainRef = useRef<HTMLElement>(null);
 
+  /** Evita scrim a pantalla completa si el estado del modal quedó incoherente al navegar. */
+  useEffect(() => {
+    setQuickNoteModalOpen(false);
+    setCommandPaletteOpen(false);
+  }, [location.pathname, setQuickNoteModalOpen, setCommandPaletteOpen]);
+
   useCategories();
+
+  useEffect(() => {
+    const root = document.documentElement;
+    root.classList.remove('docbrain-comfort-default', 'docbrain-comfort-high-contrast', 'docbrain-comfort-low-luminance');
+    root.classList.add(`docbrain-comfort-${visualComfort}`);
+    return () => root.classList.remove(`docbrain-comfort-${visualComfort}`);
+  }, [visualComfort]);
+
+  useEffect(() => {
+    if (!breakReminderMinutes) return undefined;
+    const ms = breakReminderMinutes * 60 * 1000;
+    const id = window.setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        toast('Tómate una pausa breve: estira piernas y descansa la vista.', { duration: 8000 });
+      }
+    }, ms);
+    return () => window.clearInterval(id);
+  }, [breakReminderMinutes]);
 
   useKeyboardShortcuts([
     { key: 'k', ctrl: true, action: () => setCommandPaletteOpen(true), description: 'Búsqueda' },
@@ -85,7 +115,7 @@ function LayoutInner({
       key: 'n',
       ctrl: true,
       shift: true,
-      action: () => setQuickNoteOpen(true),
+      action: () => setQuickNoteModalOpen(true),
       description: 'Nota rápida',
     },
     { key: '/', ctrl: true, action: () => setShowShortcuts(true), description: 'Atajos' },
@@ -127,9 +157,11 @@ function LayoutInner({
         >
           <PageBreadcrumb />
           <div className="flex-1 min-h-0 flex flex-col">
-            <Suspense fallback={<RouteFallback />}>
+            <Suspense fallback={<SmartRouteFallback />}>
               <PageTransition>
-                <Outlet />
+                <div className="app-main-inner flex min-h-0 min-w-0 flex-1 flex-col">
+                  <Outlet />
+                </div>
               </PageTransition>
             </Suspense>
           </div>
@@ -137,19 +169,9 @@ function LayoutInner({
         </main>
       </div>
 
-      <button
-        type="button"
-        className="fixed bottom-6 right-6 z-30 hidden md:flex h-12 w-12 items-center justify-center rounded-full bg-[var(--brand-600)] text-white shadow-[var(--shadow-brand)] ring-1 ring-white/20 hover:opacity-95 active:scale-95 motion-reduce:transition-none transition-transform"
-        aria-label="Nueva nota rápida"
-        title="Nota rápida (Ctrl+Shift+N)"
-        onClick={() => setQuickNoteOpen(true)}
-      >
-        <StickyNote className="h-5 w-5" aria-hidden />
-      </button>
-
       <ScrollToTop scrollContainerRef={mainRef} />
 
-      <QuickNoteModal open={quickNoteOpen} onOpenChange={setQuickNoteOpen} />
+      <QuickNoteModal open={quickNoteModalOpen} onOpenChange={setQuickNoteModalOpen} />
 
       <CommandPalette />
 
@@ -160,7 +182,7 @@ function LayoutInner({
       <Toaster
         position="top-right"
         gutter={10}
-        containerClassName="!max-sm:top-auto !max-sm:bottom-4 !max-sm:right-4"
+        containerClassName="!max-sm:top-auto !max-sm:bottom-4 !max-sm:right-4 !pb-[max(0.5rem,env(safe-area-inset-bottom))]"
         toastOptions={{
           duration: 4200,
           style: {
@@ -170,14 +192,20 @@ function LayoutInner({
             borderRadius: '0.75rem',
             fontSize: '0.875rem',
             boxShadow: '0 10px 40px rgba(15, 23, 42, 0.12)',
+            paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))',
           },
           success: {
             iconTheme: { primary: 'var(--success)', secondary: '#ffffff' },
             style: { borderLeft: '4px solid var(--success)' },
+            duration: 3200,
           },
           error: {
             iconTheme: { primary: 'var(--destructive)', secondary: '#ffffff' },
             style: { borderLeft: '4px solid var(--destructive)' },
+            duration: 14_000,
+          },
+          loading: {
+            duration: 60_000,
           },
         }}
       />

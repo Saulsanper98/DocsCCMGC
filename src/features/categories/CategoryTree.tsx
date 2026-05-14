@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useMemo, useState, useCallback, type ReactNode } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   DndContext,
@@ -74,15 +74,38 @@ const systemItems = [
 interface CategoryTreeProps {
   selectedId?: string;
   onSelect: (id: string | undefined) => void;
+  /** Menos padding horizontal cuando el rail principal está colapsado (más útil en documentos). */
+  compact?: boolean;
 }
 
-export function CategoryTree({ selectedId, onSelect }: CategoryTreeProps) {
+export function CategoryTree({ selectedId, onSelect, compact }: CategoryTreeProps) {
   const navigate = useNavigate();
   const location = useLocation();
-  const { tree, loading, createCategory, deleteCategory, reorderRootCategories } = useCategories();
+  const { tree, loading, createCategory, deleteCategory, reorderRootCategories, updateCategory } = useCategories();
   const [filterText, setFilterText] = useState('');
   const [showNewInput, setShowNewInput] = useState(false);
   const [newCatName, setNewCatName] = useState('');
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameDraft, setRenameDraft] = useState('');
+
+  const saveRename = useCallback(async () => {
+    if (!renamingId) return;
+    const name = renameDraft.trim();
+    if (!name) return;
+    await updateCategory(renamingId, { name });
+    setRenamingId(null);
+    setRenameDraft('');
+  }, [renamingId, renameDraft, updateCategory]);
+
+  const cancelRename = useCallback(() => {
+    setRenamingId(null);
+    setRenameDraft('');
+  }, []);
+
+  const beginRename = useCallback((id: string, name: string) => {
+    setRenamingId(id);
+    setRenameDraft(name);
+  }, []);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -122,13 +145,26 @@ export function CategoryTree({ selectedId, onSelect }: CategoryTreeProps) {
           placeholder="Filtrar categorías…"
           value={filterText}
           onChange={(e) => setFilterText(e.target.value)}
-          className="w-full rounded-md border border-[var(--border)] bg-[var(--background)] px-2.5 py-1.5 text-xs text-[var(--foreground)] outline-none placeholder:text-[var(--muted-foreground)] focus:ring-1 focus:ring-[var(--ring)]"
+          className={cn(
+            'w-full rounded-md border border-[var(--border)] bg-[var(--background)] px-3 py-1.5 text-xs text-[var(--foreground)] outline-none placeholder:text-[var(--muted-foreground)] focus:ring-1 focus:ring-[var(--ring)]',
+            filterText.trim() && 'ring-2 ring-[var(--accent)]/25',
+          )}
         />
+        {!dndRoots && filterText.trim() ? (
+          <p className="mt-2 rounded-md bg-[var(--muted)]/50 px-2 py-1.5 text-[10px] leading-snug text-[var(--muted-foreground)]">
+            Quita el texto del filtro para poder reordenar las carpetas raíz con el asa ⋮⋮.
+          </p>
+        ) : null}
       </div>
 
       <div className="flex-1 overflow-y-auto py-2">
-        <div className="mb-1 px-2">
-          <p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted-foreground)]">
+        <div className={cn('mb-1', compact ? 'px-2.5' : 'px-2')}>
+          <p
+            className={cn(
+              'py-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted-foreground)]',
+              compact ? 'px-0' : 'px-2',
+            )}
+          >
             Sistema
           </p>
           {systemItems.map((item) => {
@@ -142,7 +178,8 @@ export function CategoryTree({ selectedId, onSelect }: CategoryTreeProps) {
                   onSelect(undefined);
                 }}
                 className={cn(
-                  'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs transition-colors',
+                  'flex w-full items-center gap-2 rounded-md py-1.5 text-xs transition-colors',
+                  compact ? 'px-2.5' : 'px-2',
                   isActive
                     ? 'bg-[var(--accent)] text-white'
                     : 'text-[var(--foreground)] hover:bg-[var(--muted)]',
@@ -155,8 +192,8 @@ export function CategoryTree({ selectedId, onSelect }: CategoryTreeProps) {
           })}
         </div>
 
-        <div className="px-2">
-          <div className="flex items-center justify-between px-2 py-1">
+        <div className={compact ? 'px-2.5' : 'px-2'}>
+          <div className={cn('flex items-center justify-between py-1', compact ? 'px-0' : 'px-2')}>
             <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted-foreground)]">
               Categorías
             </p>
@@ -171,7 +208,7 @@ export function CategoryTree({ selectedId, onSelect }: CategoryTreeProps) {
           </div>
 
           {showNewInput && (
-            <div className="mb-1 flex items-center gap-1 px-1">
+            <div className="mb-1 flex items-center gap-1 px-0">
               <input
                 autoFocus
                 type="text"
@@ -188,7 +225,7 @@ export function CategoryTree({ selectedId, onSelect }: CategoryTreeProps) {
           )}
 
           {loading ? (
-            <div className="space-y-1 px-2">
+            <div className={cn('space-y-1', compact ? 'px-0' : 'px-2')}>
               {Array.from({ length: 4 }).map((_, i) => (
                 <div key={i} className="h-6 animate-pulse rounded bg-[var(--muted)]" />
               ))}
@@ -198,15 +235,23 @@ export function CategoryTree({ selectedId, onSelect }: CategoryTreeProps) {
               <SortableContext items={tree.map((c) => c.id)} strategy={verticalListSortingStrategy}>
                 <div className="space-y-0.5">
                   {tree.map((cat) => (
-                    <SortableRootCategory
-                      key={cat.id}
-                      category={cat}
-                      selectedId={selectedId}
-                      onSelect={onSelect}
-                      onDelete={deleteCategory}
-                      onAdd={createCategory}
-                      filter={filterText}
-                    />
+                  <SortableRootCategory
+                    key={cat.id}
+                    category={cat}
+                    selectedId={selectedId}
+                    onSelect={onSelect}
+                    onDelete={deleteCategory}
+                    onAdd={createCategory}
+                    filter={filterText}
+                    compact={compact}
+                    ancestors={[]}
+                    renamingId={renamingId}
+                    renameDraft={renameDraft}
+                    onRenameDraftChange={setRenameDraft}
+                    onBeginRename={beginRename}
+                    onSaveRename={saveRename}
+                    onCancelRename={cancelRename}
+                  />
                   ))}
                 </div>
               </SortableContext>
@@ -223,6 +268,14 @@ export function CategoryTree({ selectedId, onSelect }: CategoryTreeProps) {
                   onAdd={createCategory}
                   level={0}
                   filter={filterText}
+                  compact={compact}
+                  ancestors={[]}
+                  renamingId={renamingId}
+                  renameDraft={renameDraft}
+                  onRenameDraftChange={setRenameDraft}
+                  onBeginRename={beginRename}
+                  onSaveRename={saveRename}
+                  onCancelRename={cancelRename}
                 />
               ))}
             </div>
@@ -240,6 +293,14 @@ function SortableRootCategory({
   onDelete,
   onAdd,
   filter,
+  compact,
+  ancestors,
+  renamingId,
+  renameDraft,
+  onRenameDraftChange,
+  onBeginRename,
+  onSaveRename,
+  onCancelRename,
 }: {
   category: Category;
   selectedId?: string;
@@ -247,6 +308,14 @@ function SortableRootCategory({
   onDelete: (id: string) => void;
   onAdd: (name: string, parentId?: string) => void;
   filter: string;
+  compact?: boolean;
+  ancestors: string[];
+  renamingId: string | null;
+  renameDraft: string;
+  onRenameDraftChange: (s: string) => void;
+  onBeginRename: (id: string, name: string) => void;
+  onSaveRename: () => void | Promise<void>;
+  onCancelRename: () => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: category.id,
@@ -270,6 +339,14 @@ function SortableRootCategory({
         onAdd={onAdd}
         level={0}
         filter={filter}
+        compact={compact}
+        ancestors={ancestors}
+        renamingId={renamingId}
+        renameDraft={renameDraft}
+        onRenameDraftChange={onRenameDraftChange}
+        onBeginRename={onBeginRename}
+        onSaveRename={onSaveRename}
+        onCancelRename={onCancelRename}
         dragHandle={
           <button
             type="button"
@@ -299,6 +376,14 @@ function CategoryNode({
   level,
   filter,
   dragHandle,
+  compact,
+  ancestors,
+  renamingId,
+  renameDraft,
+  onRenameDraftChange,
+  onBeginRename,
+  onSaveRename,
+  onCancelRename,
 }: {
   category: Category;
   selectedId?: string;
@@ -308,6 +393,14 @@ function CategoryNode({
   level: number;
   filter: string;
   dragHandle?: ReactNode;
+  compact?: boolean;
+  ancestors: string[];
+  renamingId: string | null;
+  renameDraft: string;
+  onRenameDraftChange: (s: string) => void;
+  onBeginRename: (id: string, name: string) => void;
+  onSaveRename: () => void | Promise<void>;
+  onCancelRename: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
@@ -315,15 +408,23 @@ function CategoryNode({
   const Icon = iconMap[category.icon] ?? Folder;
   const OpenIcon = hasChildren && open ? FolderOpen : Icon;
   const isSelected = selectedId === category.id;
+  const breadcrumbTitle =
+    ancestors.length > 0 ? `${ancestors.join(' › ')} › ${category.name}` : category.name;
+
+  const padStep = compact ? 10 : 12;
+  /** Nivel 0: solo padding de clase (evita style paddingLeft:0 que anula pl-*). Anidados: sangría en px. */
+  const paddingLeftStyle = level > 0 ? { paddingLeft: level * padStep } : undefined;
+  const rowPadX = compact ? 'pl-3.5 pr-2' : level === 0 ? 'pl-1 pr-2' : 'px-2';
 
   return (
     <div>
       <div
         className={cn(
-          'group flex cursor-pointer items-center gap-1 rounded-md px-2 py-1.5 text-xs transition-colors',
+          'group flex cursor-pointer items-center gap-1 rounded-md py-1.5 text-xs transition-colors',
+          rowPadX,
           isSelected ? 'bg-[var(--accent)] text-white' : 'text-[var(--foreground)] hover:bg-[var(--muted)]',
         )}
-        style={{ paddingLeft: `${8 + level * 12}px` }}
+        style={paddingLeftStyle}
         onClick={() => onSelect(category.id)}
       >
         {level === 0 && dragHandle ? <span className="flex shrink-0 items-center">{dragHandle}</span> : null}
@@ -347,7 +448,45 @@ function CategoryNode({
           <OpenIcon className="h-full w-full" />
         </span>
 
-        <span className="flex-1 truncate">{category.name}</span>
+        {renamingId === category.id ? (
+          <div
+            className="flex min-w-0 flex-1 items-center gap-1"
+            onClick={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
+          >
+            <input
+              autoFocus
+              type="text"
+              value={renameDraft}
+              onChange={(e) => onRenameDraftChange(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.stopPropagation();
+                  void onSaveRename();
+                }
+                if (e.key === 'Escape') {
+                  e.stopPropagation();
+                  onCancelRename();
+                }
+              }}
+              className="min-w-0 flex-1 rounded border border-[var(--border)] bg-[var(--background)] px-1.5 py-0.5 text-xs text-[var(--foreground)] outline-none focus:ring-1 focus:ring-[var(--ring)]"
+            />
+            <button
+              type="button"
+              className="shrink-0 rounded bg-[var(--accent)] px-1.5 py-0.5 text-[10px] font-medium text-white"
+              onClick={() => void onSaveRename()}
+            >
+              OK
+            </button>
+            <button type="button" className="shrink-0 text-[10px] text-[var(--muted-foreground)]" onClick={onCancelRename}>
+              ✕
+            </button>
+          </div>
+        ) : (
+          <span className="flex-1 truncate" title={breadcrumbTitle}>
+            {category.name}
+          </span>
+        )}
 
         {category.document_count !== undefined && category.document_count > 0 && (
           <span className={cn('text-[10px]', isSelected ? 'text-white/70' : 'text-[var(--muted-foreground)]')}>
@@ -355,7 +494,7 @@ function CategoryNode({
           </span>
         )}
 
-        <div className="relative opacity-0 transition-opacity group-hover:opacity-100">
+        <div className="relative max-lg:opacity-100 opacity-0 transition-opacity group-hover:opacity-100">
           <button
             type="button"
             onClick={(e) => {
@@ -380,11 +519,19 @@ function CategoryNode({
                       setShowMenu(false);
                     },
                   },
-                  { icon: Pencil, label: 'Renombrar', action: () => setShowMenu(false) },
+                  { icon: Pencil, label: 'Renombrar', action: () => { onBeginRename(category.id, category.name); setShowMenu(false); } },
                   {
                     icon: Trash2,
                     label: 'Eliminar',
                     action: () => {
+                      if (
+                        !window.confirm(
+                          `¿Eliminar la categoría «${category.name}»? Los documentos pueden quedar sin carpeta si no se reasignan.`,
+                        )
+                      ) {
+                        setShowMenu(false);
+                        return;
+                      }
                       void onDelete(category.id);
                       setShowMenu(false);
                     },
@@ -427,6 +574,14 @@ function CategoryNode({
                 onAdd={onAdd}
                 level={level + 1}
                 filter={filter}
+                compact={compact}
+                ancestors={[...ancestors, category.name]}
+                renamingId={renamingId}
+                renameDraft={renameDraft}
+                onRenameDraftChange={onRenameDraftChange}
+                onBeginRename={onBeginRename}
+                onSaveRename={onSaveRename}
+                onCancelRename={onCancelRename}
               />
             ))}
         </div>
